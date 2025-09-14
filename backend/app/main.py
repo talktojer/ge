@@ -1,0 +1,52 @@
+"""
+Galactic Empire FastAPI Application
+Main entry point for the backend API
+"""
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+import os
+
+# Create FastAPI app
+app = FastAPI(
+    title="Galactic Empire API",
+    description="Backend API for the Galactic Empire space conquest game",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# Configure CORS
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:13000").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {"message": "Welcome to Galactic Empire API", "status": "online"}
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "service": "galactic-empire-backend"}
+
+@app.get("/api/status")
+async def api_status():
+    """API status endpoint"""
+    return {
+        "api_version": "1.0.0",
+        "status": "operational",
+        "game": "Galactic Empire",
+        "description": "Space conquest game backend"
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
