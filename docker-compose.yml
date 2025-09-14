@@ -1,0 +1,132 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: galactic-empire-db
+    environment:
+      POSTGRES_DB: galactic_empire
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-galactic_empire_dev}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - galactic-empire-network
+    restart: unless-stopped
+
+  # Redis Cache and Pub/Sub
+  redis:
+    image: redis:7-alpine
+    container_name: galactic-empire-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-galactic_empire_redis}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - galactic-empire-network
+    restart: unless-stopped
+
+  # Python Backend (FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: galactic-empire-backend
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-galactic_empire_dev}@postgres:5432/galactic_empire
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-galactic_empire_redis}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - galactic-empire-network
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+
+  # Celery Worker for Background Tasks
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: galactic-empire-celery-worker
+    command: celery -A app.core.celery worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-galactic_empire_dev}@postgres:5432/galactic_empire
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-galactic_empire_redis}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    networks:
+      - galactic-empire-network
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+
+  # Celery Beat for Scheduled Tasks
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: galactic-empire-celery-beat
+    command: celery -A app.core.celery beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-galactic_empire_dev}@postgres:5432/galactic_empire
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-galactic_empire_redis}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    networks:
+      - galactic-empire-network
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: galactic-empire-frontend
+    environment:
+      - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:8000}
+      - REACT_APP_WS_URL=${REACT_APP_WS_URL:-ws://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - galactic-empire-network
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  galactic-empire-network:
+    driver: bridge
