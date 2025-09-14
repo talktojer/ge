@@ -8,6 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import os
 
+# Import API routers
+from .api import game_engine
+
 # Create FastAPI app
 app = FastAPI(
     title="Galactic Empire API",
@@ -36,6 +39,9 @@ async def root():
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "service": "galactic-empire-backend"}
+
+# Include API routers
+app.include_router(game_engine.router, prefix="/api")
 
 @app.get("/api/status")
 async def api_status():
