@@ -11,11 +11,6 @@ import logging
 
 from ..core.game_engine import game_engine
 from ..core.coordinates import Coordinate
-from ..tasks.game_engine_tasks import (
-    process_ship_tick, process_movement_tick, process_planet_tick,
-    process_cybertron_tick, update_ship_movement, get_ship_status,
-    get_sector_info
-)
 
 logger = logging.getLogger(__name__)
 
@@ -313,6 +308,9 @@ async def get_beacon_message(x: float, y: float):
 async def trigger_ship_tick(background_tasks: BackgroundTasks, ship_data: List[Dict[str, Any]]):
     """Trigger ship tick processing"""
     try:
+        # Lazy import to avoid startup issues
+        from ..tasks.game_engine_tasks import process_ship_tick
+        
         # Queue the task for background processing
         task = process_ship_tick.delay(ship_data)
         
@@ -331,6 +329,9 @@ async def trigger_movement_tick(background_tasks: BackgroundTasks,
                                clicker: int = 0):
     """Trigger movement tick processing"""
     try:
+        # Lazy import to avoid startup issues
+        from ..tasks.game_engine_tasks import process_movement_tick
+        
         # Queue the task for background processing
         task = process_movement_tick.delay(ship_data, clicker)
         
@@ -347,6 +348,9 @@ async def trigger_movement_tick(background_tasks: BackgroundTasks,
 async def trigger_planet_tick(background_tasks: BackgroundTasks, planet_data: List[Dict[str, Any]]):
     """Trigger planet tick processing"""
     try:
+        # Lazy import to avoid startup issues
+        from ..tasks.game_engine_tasks import process_planet_tick
+        
         # Queue the task for background processing
         task = process_planet_tick.delay(planet_data)
         
@@ -364,6 +368,9 @@ async def trigger_cybertron_tick(background_tasks: BackgroundTasks,
                                 cybertron_data: List[Dict[str, Any]]):
     """Trigger Cybertron tick processing"""
     try:
+        # Lazy import to avoid startup issues
+        from ..tasks.game_engine_tasks import process_cybertron_tick
+        
         # Queue the task for background processing
         task = process_cybertron_tick.delay(cybertron_data)
         

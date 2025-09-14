@@ -13,7 +13,8 @@ celery_app = Celery(
     include=[
         "app.tasks.game_tasks",
         "app.tasks.planet_tasks",
-        "app.tasks.ship_tasks"
+        "app.tasks.ship_tasks",
+        "app.tasks.game_engine_tasks"
     ]
 )
 
