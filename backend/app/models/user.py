@@ -2,7 +2,7 @@
 User account models based on WARUSR structure
 """
 
-from sqlalchemy import Column, Integer, String, BigInteger, DateTime, Text, Boolean
+from sqlalchemy import Column, Integer, String, BigInteger, DateTime, Text, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .base import Base
