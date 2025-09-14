@@ -13,7 +13,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "5432:5432"
+      - "15432:5432"
     networks:
       - galactic-empire-network
     restart: unless-stopped
@@ -26,7 +26,7 @@ services:
     volumes:
       - redis_data:/data
     ports:
-      - "6379:6379"
+      - "16379:6379"
     networks:
       - galactic-empire-network
     restart: unless-stopped
@@ -42,9 +42,9 @@ services:
       - REDIS_URL=redis://:${REDIS_PASSWORD:-galactic_empire_redis}@redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
       - ENVIRONMENT=${ENVIRONMENT:-development}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:13000}
     ports:
-      - "8000:8000"
+      - "18000:8000"
     depends_on:
       - postgres
       - redis
@@ -108,10 +108,10 @@ services:
       dockerfile: Dockerfile
     container_name: galactic-empire-frontend
     environment:
-      - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:8000}
-      - REACT_APP_WS_URL=${REACT_APP_WS_URL:-ws://localhost:8000}
+      - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:18000}
+      - REACT_APP_WS_URL=${REACT_APP_WS_URL:-ws://localhost:18000}
     ports:
-      - "3000:3000"
+      - "13000:3000"
     depends_on:
       - backend
     networks:
