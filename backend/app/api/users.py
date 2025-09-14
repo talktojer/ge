@@ -12,10 +12,11 @@ from typing import Dict, List, Optional, Any
 from sqlalchemy.orm import Session
 import logging
 
-from ..core.database import get_db
+from ..models.base import get_db
 from ..core.auth import auth_service
 from ..core.user_service import user_service
 from ..core.coordinates import Coordinate
+from ..models.user import User
 
 logger = logging.getLogger(__name__)
 

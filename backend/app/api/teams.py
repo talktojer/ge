@@ -10,10 +10,12 @@ from pydantic import BaseModel
 from typing import Dict, List, Optional, Any
 from sqlalchemy.orm import Session
 
-from ..core.database import get_db
+from ..models.base import get_db
 from ..core.auth import auth_service
 from ..core.team_service import team_service
 from ..api.users import get_current_user
+from ..models.user import User
+from ..models.team import Team
 
 router = APIRouter(prefix="/teams", tags=["teams"])
 

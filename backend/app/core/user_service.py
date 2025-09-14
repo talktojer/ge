@@ -13,6 +13,7 @@ from datetime import datetime
 from ..models.user import User, UserAccount, UserSession
 from ..models.ship import Ship
 from ..models.team import Team
+from ..models.planet import Planet
 from ..core.auth import auth_service
 from ..core.game_engine import game_engine
 
