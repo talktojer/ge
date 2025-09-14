@@ -10,19 +10,19 @@ class Settings(BaseSettings):
     """Application settings"""
     
     # Database
-    database_url: str = os.getenv("DATABASE_URL", "postgresql://postgres:galactic_empire_dev@postgres:5432/galactic_empire")
+    database_url: str = "postgresql://postgres:galactic_empire_dev@postgres:5432/galactic_empire"
     
     # Redis
-    redis_url: str = os.getenv("REDIS_URL", "redis://:galactic_empire_redis@redis:6379/0")
+    redis_url: str = "redis://:galactic_empire_redis@redis:6379/0"
     
     # Security
-    secret_key: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+    secret_key: str = "your-secret-key-change-in-production"
     
     # Environment
-    environment: str = os.getenv("ENVIRONMENT", "development")
+    environment: str = "development"
     
     # CORS
-    cors_origins: List[str] = os.getenv("CORS_ORIGINS", "http://localhost:13000").split(",")
+    cors_origins: List[str] = ["http://localhost:13000"]
     
     # Game settings
     game_name: str = "Galactic Empire"
