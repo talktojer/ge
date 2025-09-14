@@ -12,7 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import your models
 from app.models.base import Base
-from app.models.user import User, UserAccount
+from app.models.user import User, UserAccount, UserToken, UserSession
 from app.models.ship import Ship, ShipClass, ShipType
 from app.models.planet import Planet, Sector, PlanetItem
 from app.models.team import Team

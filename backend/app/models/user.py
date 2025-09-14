@@ -18,6 +18,12 @@ class User(Base):
     # User identification (from WARUSR.userid)
     userid = Column(String(25), unique=True, index=True, nullable=False)
     
+    # Authentication fields (new for web app)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True)
+    is_verified = Column(Boolean, default=False)
+    
     # Game statistics (from WARUSR)
     score = Column(BigInteger, default=0)  # WARUSR.score
     noships = Column(Integer, default=0)   # WARUSR.noships - number of ships
@@ -45,10 +51,14 @@ class User(Base):
     scan_full = Column(Boolean, default=False)     # SCANFULL
     msg_filter = Column(Boolean, default=False)    # MSG_FILTER
     
+    # Authentication timestamps
+    last_login = Column(DateTime(timezone=True))
+    last_password_change = Column(DateTime(timezone=True))
+    email_verified_at = Column(DateTime(timezone=True))
+    
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    last_login = Column(DateTime(timezone=True))
     
     # Relationships
     ships = relationship("Ship", back_populates="user")
@@ -66,10 +76,9 @@ class UserAccount(Base):
     __tablename__ = "user_accounts"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     
     # Additional account settings
-    is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
     is_sysop = Column(Boolean, default=False)
     
@@ -82,5 +91,61 @@ class UserAccount(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
+    # Relationships
+    user = relationship("User")
+    
     def __repr__(self):
-        return f"<UserAccount(user_id={self.user_id}, is_active={self.is_active})>"
+        return f"<UserAccount(user_id={self.user_id}, is_admin={self.is_admin})>"
+
+
+class UserToken(Base):
+    """Authentication tokens for users"""
+    __tablename__ = "user_tokens"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    # Token information
+    token_type = Column(String(50), nullable=False)  # "email_verification", "password_reset", "refresh", etc.
+    token_hash = Column(String(255), nullable=False)  # Hashed token value
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    
+    # Usage tracking
+    is_used = Column(Boolean, default=False)
+    used_at = Column(DateTime(timezone=True))
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User")
+    
+    def __repr__(self):
+        return f"<UserToken(user_id={self.user_id}, type={self.token_type}, expires={self.expires_at})>"
+
+
+class UserSession(Base):
+    """User login sessions"""
+    __tablename__ = "user_sessions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+    # Session information
+    session_token = Column(String(255), unique=True, nullable=False, index=True)
+    ip_address = Column(String(45))  # IPv6 compatible
+    user_agent = Column(Text)
+    
+    # Session status
+    is_active = Column(Boolean, default=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    last_activity = Column(DateTime(timezone=True))
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User")
+    
+    def __repr__(self):
+        return f"<UserSession(user_id={self.user_id}, active={self.is_active})>"
