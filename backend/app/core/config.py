@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     
     # CORS
-    cors_origins: List[str] = ["http://localhost:13000"]
+    cors_origins: str = "http://localhost:13000"
     
     # Game settings
     game_name: str = "Galactic Empire"
@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        # Ignore environment variables for CORS_ORIGINS to avoid parsing issues
+        env_ignore_empty = True
 
 # Global settings instance
 settings = Settings()
