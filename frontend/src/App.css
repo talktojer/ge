@@ -1,0 +1,33 @@
+.App {
+  text-align: center;
+}
+
+.App-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+}
+
+.App-header h1 {
+  margin-bottom: 20px;
+  color: #61dafb;
+}
+
+.game-status {
+  margin-top: 30px;
+  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  max-width: 500px;
+}
+
+.game-status p {
+  margin: 10px 0;
+  font-size: 16px;
+}
