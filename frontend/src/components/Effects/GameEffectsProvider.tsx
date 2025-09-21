@@ -364,7 +364,7 @@ const GameEffectsProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!latestUpdate || !enableEffects) return;
 
     switch (latestUpdate.type) {
-      case 'combat_event':
+      case 'combat_update':
         if (latestUpdate.data.type === 'weapon_fire') {
           playSound('weapon_fire');
           showParticleEffect('weapon_trail', { x: 400, y: 300 });
@@ -378,24 +378,6 @@ const GameEffectsProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         break;
 
-      case 'wormhole_travel':
-        playSound('warp_jump');
-        triggerAnimation('warp_effect');
-        break;
-
-      case 'spy_report':
-        playSound('notification');
-        break;
-
-      case 'mine_triggered':
-        playSound('explosion');
-        showParticleEffect('explosion', { x: 200, y: 200 });
-        triggerScreenFlash('rgba(255, 107, 107, 0.4)', 300);
-        break;
-
-      case 'tactical_scan':
-        playSound('scanner_ping');
-        break;
 
       default:
         break;

@@ -255,7 +255,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <LogoIcon>
             <FaRocket />
           </LogoIcon>
-          {!collapsed && <LogoText>GE</LogoText>}
+          {!collapsed && <LogoText collapsed={collapsed}>GE</LogoText>}
         </Logo>
         <ToggleButton onClick={onToggle}>
           {collapsed ? <FaChevronRight /> : <FaChevronLeft />}

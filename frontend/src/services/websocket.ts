@@ -137,15 +137,15 @@ class WebSocketService {
     // Advanced tactical updates
     this.socket.on('tactical_scan_result', (scanData) => {
       store.dispatch(addGameUpdate({
-        type: 'tactical_scan',
-        data: scanData,
+        type: 'message',
+        data: { message: 'Tactical scan completed', scanData },
         timestamp: new Date().toISOString(),
       }));
     });
 
     this.socket.on('combat_event', (combatEvent) => {
       store.dispatch(addGameUpdate({
-        type: 'combat_event',
+        type: 'combat_update',
         data: combatEvent,
         timestamp: new Date().toISOString(),
       }));
@@ -183,8 +183,8 @@ class WebSocketService {
 
     this.socket.on('wormhole_travel_complete', (travelData) => {
       store.dispatch(addGameUpdate({
-        type: 'wormhole_travel',
-        data: travelData,
+        type: 'message',
+        data: { message: 'Wormhole travel completed', travelData },
         timestamp: new Date().toISOString(),
       }));
       
@@ -198,8 +198,8 @@ class WebSocketService {
     // Espionage updates
     this.socket.on('spy_report', (spyData) => {
       store.dispatch(addGameUpdate({
-        type: 'spy_report',
-        data: spyData,
+        type: 'message',
+        data: { message: 'Spy report received', spyData },
         timestamp: new Date().toISOString(),
       }));
       
@@ -226,8 +226,8 @@ class WebSocketService {
 
     this.socket.on('mine_triggered', (mineData) => {
       store.dispatch(addGameUpdate({
-        type: 'mine_triggered',
-        data: mineData,
+        type: 'message',
+        data: { message: 'Mine field triggered', mineData },
         timestamp: new Date().toISOString(),
       }));
       
