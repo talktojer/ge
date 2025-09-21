@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useAppSelector, useAppDispatch } from '../../hooks/redux';
 import { 
-  FaPortal, 
+  FaDotCircle, 
   FaRocket, 
   FaMapMarkerAlt,
   FaExclamationTriangle,
@@ -641,7 +641,7 @@ const WormholeInterface: React.FC<{ shipId: number }> = ({ shipId }) => {
       <NavigationDisplay>
         <DisplayHeader>
           <DisplayTitle>
-            <FaPortal />
+            <FaDotCircle />
             Wormhole Navigation Network
           </DisplayTitle>
           <DisplayControls>
@@ -731,7 +731,7 @@ const WormholeInterface: React.FC<{ shipId: number }> = ({ shipId }) => {
             <>
               <InfoSection>
                 <SectionTitle>
-                  <FaPortal />
+                  <FaDotCircle />
                   Wormhole Details
                 </SectionTitle>
                 <InfoItem>

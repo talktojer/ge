@@ -13,8 +13,8 @@ import {
   FaSignOutAlt,
   FaChevronLeft,
   FaChevronRight,
-  FaSpaceShuttle,
-  FaUserAstronaut
+  FaRocket,
+  FaUser
 } from 'react-icons/fa';
 
 const SidebarContainer = styled.div<{ collapsed: boolean }>`
@@ -253,7 +253,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <SidebarHeader>
         <Logo collapsed={collapsed}>
           <LogoIcon>
-            <FaSpaceShuttle />
+            <FaRocket />
           </LogoIcon>
           {!collapsed && <LogoText>GE</LogoText>}
         </Logo>
@@ -284,7 +284,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <SidebarFooter>
         <UserSection collapsed={collapsed}>
           <UserAvatar>
-            <FaUserAstronaut />
+            <FaUser />
           </UserAvatar>
           {!collapsed && (
             <UserInfo>

@@ -9,15 +9,13 @@ import {
   FaExclamationTriangle,
   FaTarget,
   FaFire,
-  FaExplosion,
   FaLock,
   FaUnlock,
   FaPlay,
   FaPause,
   FaForward,
   FaBackward,
-  FaEye,
-  FaTachometerAlt
+  FaEye
 } from 'react-icons/fa';
 
 // Combat Interface Types

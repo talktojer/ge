@@ -20,9 +20,9 @@ import {
   FaExclamationTriangle,
   FaCheckCircle,
   FaInfo,
-  FaRadar,
+  FaSearch,
   FaEye,
-  FaPortal,
+  FaDotCircle,
   FaUserSecret
 } from 'react-icons/fa';
 
@@ -520,7 +520,7 @@ const ShipControl: React.FC = () => {
             active={activeTab === 'tactical'} 
             onClick={() => setActiveTab('tactical')}
           >
-            <FaRadar />
+            <FaSearch />
             Tactical Display
           </Tab>
           <Tab 
@@ -534,7 +534,7 @@ const ShipControl: React.FC = () => {
             active={activeTab === 'wormholes'} 
             onClick={() => setActiveTab('wormholes')}
           >
-            <FaPortal />
+            <FaDotCircle />
             Wormholes
           </Tab>
           <Tab 

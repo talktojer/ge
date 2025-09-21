@@ -66,6 +66,7 @@ class User(Base):
     mail_sent = relationship("Mail", foreign_keys="Mail.sender_id", back_populates="sender")
     mail_received = relationship("Mail", foreign_keys="Mail.recipient_id", back_populates="recipient")
     team = relationship("Team", back_populates="members")
+    roles = relationship("Role", secondary="user_roles", back_populates="users")
     
     def __repr__(self):
         return f"<User(userid='{self.userid}', score={self.score})>"

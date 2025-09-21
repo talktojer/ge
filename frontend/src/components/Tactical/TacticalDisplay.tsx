@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import styled from 'styled-components';
 import { useAppSelector, useAppDispatch } from '../../hooks/redux';
 import { 
-  FaRadar, 
+  FaSearch, 
   FaCrosshairs, 
   FaEye, 
   FaExclamationTriangle,
@@ -450,7 +450,7 @@ const TacticalDisplay: React.FC<{ shipId: number }> = ({ shipId }) => {
       <TacticalHeader>
         <HeaderLeft>
           <HeaderTitle>
-            <FaRadar />
+            <FaSearch />
             Tactical Display
           </HeaderTitle>
           <ScannerMode 
