@@ -5,7 +5,7 @@ import {
   FaBars, 
   FaBell, 
   FaWifi, 
-  FaWifiSlash,
+  FaExclamationTriangle,
   FaClock,
   FaUser
 } from 'react-icons/fa';
@@ -154,7 +154,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, sidebarCollapsed }) =>
 
       <RightSection>
         <StatusIndicator online={is_connected}>
-          {is_connected ? <FaWifi size={12} /> : <FaWifiSlash size={12} />}
+          {is_connected ? <FaWifi size={12} /> : <FaExclamationTriangle size={12} />}
           {is_connected ? 'Online' : 'Offline'}
         </StatusIndicator>
 

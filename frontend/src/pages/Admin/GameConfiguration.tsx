@@ -12,6 +12,7 @@ import {
 } from '../../types';
 import BalanceControls from '../../components/Admin/BalanceControls';
 import ScoringSystem from '../../components/Admin/ScoringSystem';
+import DataPersistence from '../../components/Admin/DataPersistence';
 import { showNotification } from '../../store/slices/notificationSlice';
 
 const AdminContainer = styled.div`
@@ -293,7 +294,7 @@ const SuccessMessage = styled.div`
   margin-bottom: 1rem;
 `;
 
-type TabType = 'overview' | 'configuration' | 'balance' | 'scoring' | 'history';
+type TabType = 'overview' | 'configuration' | 'balance' | 'scoring' | 'data' | 'history';
 
 interface GameConfigurationProps {}
 
@@ -678,6 +679,10 @@ const GameConfiguration: React.FC<GameConfigurationProps> = () => {
     />
   );
 
+  const renderDataTab = () => (
+    <DataPersistence />
+  );
+
   const renderHistoryTab = () => (
     <div>
       <SectionTitle>Configuration History</SectionTitle>
@@ -698,6 +703,8 @@ const GameConfiguration: React.FC<GameConfigurationProps> = () => {
         return renderBalanceTab();
       case 'scoring':
         return renderScoringTab();
+      case 'data':
+        return renderDataTab();
       case 'history':
         return renderHistoryTab();
       default:
@@ -743,6 +750,9 @@ const GameConfiguration: React.FC<GameConfigurationProps> = () => {
           </Tab>
           <Tab active={activeTab === 'scoring'} onClick={() => setActiveTab('scoring')}>
             🏆 Scoring
+          </Tab>
+          <Tab active={activeTab === 'data'} onClick={() => setActiveTab('data')}>
+            💾 Data Management
           </Tab>
           <Tab active={activeTab === 'history'} onClick={() => setActiveTab('history')}>
             📜 History

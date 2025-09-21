@@ -17,6 +17,7 @@ from app.core.database import get_db
 from app.core.game_config import game_config, ConfigCategory, ConfigParameter
 from app.core.balance_service import balance_service, BalanceMetrics, BalanceFactor
 from app.core.scoring_service import scoring_service, ScoreBreakdown, PlayerRanking, TeamRanking
+from app.core.data_persistence import data_persistence_service
 from app.models.config import GameConfig, ConfigHistory, ConfigVersion, BalanceAdjustment
 from app.models.user import User
 from app.core.auth import get_current_user
@@ -63,6 +64,34 @@ class AdminStatsResponse(BaseModel):
     configuration_count: int
     pending_balance_adjustments: int
     system_health: str
+
+
+class BackupRequest(BaseModel):
+    backup_name: Optional[str] = None
+    include_data: bool = True
+
+
+class RestoreRequest(BaseModel):
+    backup_name: str
+    confirm: bool = False
+
+
+class ExportRequest(BaseModel):
+    export_name: Optional[str] = None
+    include_users: bool = True
+    include_ships: bool = True
+    include_planets: bool = True
+    include_teams: bool = True
+    include_communications: bool = True
+
+
+class ImportRequest(BaseModel):
+    export_name: str
+    confirm: bool = False
+
+
+class CleanupRequest(BaseModel):
+    days_to_keep: int = 30
 
 
 # Authentication dependency for admin users
@@ -586,3 +615,166 @@ async def clear_system_cache(
     except Exception as e:
         logger.error(f"Error clearing system cache: {e}")
         raise HTTPException(status_code=500, detail="Failed to clear system caches")
+
+
+# =============================================================================
+# DATA PERSISTENCE ENDPOINTS
+# =============================================================================
+
+@router.get("/data/backups")
+async def get_backup_list(
+    admin_user: User = Depends(get_admin_user)
+):
+    """Get list of available database backups"""
+    try:
+        backups = data_persistence_service.get_backup_list()
+        return {"backups": backups}
+    except Exception as e:
+        logger.error(f"Error getting backup list: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve backup list")
+
+
+@router.post("/data/backup")
+async def create_backup(
+    request: BackupRequest,
+    admin_user: User = Depends(get_admin_user)
+):
+    """Create a new database backup"""
+    try:
+        backup_info = data_persistence_service.create_backup(
+            backup_name=request.backup_name,
+            include_data=request.include_data
+        )
+        
+        return {
+            "message": "Backup created successfully",
+            "backup_info": backup_info
+        }
+    except Exception as e:
+        logger.error(f"Error creating backup: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create backup: {str(e)}")
+
+
+@router.post("/data/restore")
+async def restore_backup(
+    request: RestoreRequest,
+    admin_user: User = Depends(get_admin_user)
+):
+    """Restore database from backup"""
+    try:
+        if not request.confirm:
+            raise HTTPException(
+                status_code=400, 
+                detail="Restore operation requires confirmation. Set 'confirm' to true."
+            )
+        
+        restore_info = data_persistence_service.restore_backup(
+            backup_name=request.backup_name,
+            confirm=request.confirm
+        )
+        
+        return {
+            "message": "Backup restored successfully",
+            "restore_info": restore_info
+        }
+    except Exception as e:
+        logger.error(f"Error restoring backup: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to restore backup: {str(e)}")
+
+
+@router.get("/data/exports")
+async def get_export_list(
+    admin_user: User = Depends(get_admin_user)
+):
+    """Get list of available game state exports"""
+    try:
+        exports = data_persistence_service.get_export_list()
+        return {"exports": exports}
+    except Exception as e:
+        logger.error(f"Error getting export list: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve export list")
+
+
+@router.post("/data/export")
+async def export_game_state(
+    request: ExportRequest,
+    admin_user: User = Depends(get_admin_user)
+):
+    """Export game state to JSON format"""
+    try:
+        export_info = data_persistence_service.export_game_state(
+            export_name=request.export_name,
+            include_users=request.include_users,
+            include_ships=request.include_ships,
+            include_planets=request.include_planets,
+            include_teams=request.include_teams,
+            include_communications=request.include_communications
+        )
+        
+        return {
+            "message": "Game state exported successfully",
+            "export_info": export_info
+        }
+    except Exception as e:
+        logger.error(f"Error exporting game state: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to export game state: {str(e)}")
+
+
+@router.post("/data/import")
+async def import_game_state(
+    request: ImportRequest,
+    admin_user: User = Depends(get_admin_user)
+):
+    """Import game state from JSON export"""
+    try:
+        if not request.confirm:
+            raise HTTPException(
+                status_code=400, 
+                detail="Import operation requires confirmation. Set 'confirm' to true."
+            )
+        
+        import_info = data_persistence_service.import_game_state(
+            export_name=request.export_name,
+            confirm=request.confirm
+        )
+        
+        return {
+            "message": "Game state imported successfully",
+            "import_info": import_info
+        }
+    except Exception as e:
+        logger.error(f"Error importing game state: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to import game state: {str(e)}")
+
+
+@router.get("/data/validate")
+async def validate_data_integrity(
+    admin_user: User = Depends(get_admin_user)
+):
+    """Validate database integrity and consistency"""
+    try:
+        validation_results = data_persistence_service.validate_data_integrity()
+        return validation_results
+    except Exception as e:
+        logger.error(f"Error validating data integrity: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to validate data integrity: {str(e)}")
+
+
+@router.post("/data/cleanup")
+async def cleanup_old_backups(
+    request: CleanupRequest,
+    admin_user: User = Depends(get_admin_user)
+):
+    """Clean up old backup files"""
+    try:
+        cleanup_info = data_persistence_service.cleanup_old_backups(
+            days_to_keep=request.days_to_keep
+        )
+        
+        return {
+            "message": "Backup cleanup completed successfully",
+            "cleanup_info": cleanup_info
+        }
+    except Exception as e:
+        logger.error(f"Error cleaning up backups: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to cleanup backups: {str(e)}")
