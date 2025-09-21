@@ -36,7 +36,11 @@ const ContentArea = styled.main`
   background: #0a0a0a;
 `;
 
-const Layout: React.FC = () => {
+interface LayoutProps {
+  children?: React.ReactNode;
+}
+
+const Layout: React.FC<LayoutProps> = ({ children }) => {
   const dispatch = useAppDispatch();
   const { sidebar_collapsed, active_panel } = useAppSelector((state) => state.ui);
   const { user } = useAppSelector((state) => state.auth);
@@ -82,7 +86,7 @@ const Layout: React.FC = () => {
           sidebarCollapsed={sidebar_collapsed}
         />
         <ContentArea>
-          <Outlet />
+          {children || <Outlet />}
         </ContentArea>
       </MainContent>
     </LayoutContainer>
