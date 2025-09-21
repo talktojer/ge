@@ -552,7 +552,10 @@ const WormholeInterface: React.FC<{ shipId: number }> = ({ shipId }) => {
         energy_cost: 250,
         safety_rating: 90,
         wormholes_used: [],
-        waypoints: [currentPosition, destination]
+        waypoints: [
+          { ...currentPosition, type: 'sector' }, 
+          { ...destination, type: 'sector' }
+        ]
       },
       {
         id: 'route_wormhole',
@@ -564,10 +567,10 @@ const WormholeInterface: React.FC<{ shipId: number }> = ({ shipId }) => {
         safety_rating: 75,
         wormholes_used: ['wh_001'],
         waypoints: [
-          currentPosition, 
+          { ...currentPosition, type: 'sector' }, 
           { x: 10, y: 5, type: 'wormhole' }, 
           { x: 25, y: 12, type: 'wormhole' }, 
-          destination
+          { ...destination, type: 'sector' }
         ]
       }
     ];
