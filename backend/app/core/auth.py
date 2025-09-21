@@ -12,10 +12,12 @@ from typing import Optional, Dict, Any
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from ..models.user import User, UserToken, UserSession
 from ..core.config import settings
+from ..models.base import get_db
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -280,3 +282,35 @@ class AuthService:
 
 # Global auth service instance
 auth_service = AuthService()
+
+# Security instance for JWT token extraction
+security = HTTPBearer()
+
+
+# Dependency to get current user
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """Get current authenticated user"""
+    token = credentials.credentials
+    
+    # Verify JWT token
+    payload = auth_service.verify_token(token, "access")
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Get user from database
+    user_id = int(payload.get("sub"))
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive"
+        )
+    
+    return {"id": user.id, "userid": user.userid, "user": user}

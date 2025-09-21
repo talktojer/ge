@@ -10,9 +10,8 @@ from typing import Dict, List, Optional, Any
 from sqlalchemy.orm import Session
 
 from ..models.base import get_db
-from ..core.auth import auth_service
+from ..core.auth import auth_service, get_current_user
 from ..core.zipper_service import zipper_service
-from ..api.users import get_current_user
 
 router = APIRouter(prefix="/zippers", tags=["zippers"])
 

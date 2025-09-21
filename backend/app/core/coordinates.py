@@ -193,3 +193,27 @@ def clamp_to_galaxy(coord: Coordinate) -> Coordinate:
     x = max(-UNIVMAX + 2, min(UNIVMAX - 2, coord.x))
     y = max(-UNIVMAX + 2, min(UNIVMAX - 2, coord.y))
     return Coordinate(x, y)
+
+
+def calculate_distance(x1: float, y1: float, x2: float, y2: float) -> float:
+    """Calculate distance between two coordinate points"""
+    coord1 = Coordinate(x1, y1)
+    coord2 = Coordinate(x2, y2)
+    return distance(coord1, coord2)
+
+
+def calculate_bearing(x1: float, y1: float, x2: float, y2: float) -> float:
+    """Calculate bearing from one coordinate to another"""
+    coord1 = Coordinate(x1, y1)
+    coord2 = Coordinate(x2, y2)
+    return vector(coord1, coord2)
+
+
+def distance_between_coords(coord1: Coordinate, coord2: Coordinate) -> float:
+    """Calculate distance between two Coordinate objects"""
+    return distance(coord1, coord2)
+
+
+def bearing_between_coords(coord1: Coordinate, coord2: Coordinate) -> float:
+    """Calculate bearing between two Coordinate objects"""
+    return vector(coord1, coord2)

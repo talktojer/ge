@@ -18,7 +18,8 @@ import {
   FaSearch,
   FaFilter,
   FaExpand,
-  FaEye
+  FaEye,
+  FaCircle
 } from 'react-icons/fa';
 
 // Wormhole Interface Types

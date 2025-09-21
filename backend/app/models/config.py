@@ -106,7 +106,7 @@ class PlayerScore(Base):
     percentile = Column(Float)  # Position in percentile ranking
     period_start = Column(DateTime(timezone=True), nullable=False)
     period_end = Column(DateTime(timezone=True), nullable=False)
-    metadata = Column(JSON)  # Additional score details
+    score_metadata = Column(JSON)  # Additional score details
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -131,7 +131,7 @@ class PlayerAchievement(Base):
     rarity = Column(String(20), default="common")  # common, rare, epic, legendary
     icon = Column(String(10))  # Emoji or icon identifier
     earned_at = Column(DateTime(timezone=True), server_default=func.now())
-    metadata = Column(JSON)  # Additional achievement details
+    achievement_metadata = Column(JSON)  # Additional achievement details
     
     # Relationships
     user = relationship("User", back_populates="achievements")
@@ -154,7 +154,7 @@ class TeamScore(Base):
     average_score = Column(Float, default=0.0)
     period_start = Column(DateTime(timezone=True), nullable=False)
     period_end = Column(DateTime(timezone=True), nullable=False)
-    metadata = Column(JSON)  # Additional score details
+    score_metadata = Column(JSON)  # Additional score details
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

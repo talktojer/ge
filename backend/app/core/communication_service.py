@@ -12,7 +12,7 @@ from ..models.user import User
 from ..models.ship import Ship
 from ..models.planet import Planet
 from ..models.team import Team
-from ..core.coordinates import distance_between_coords
+from ..core.coordinates import distance
 from ..core.database import get_db
 import logging
 
@@ -433,3 +433,5 @@ def format_status_message(message_type: int, data: Dict[str, Any]) -> str:
     
     template = templates.get(message_type, "Unknown status message")
     return template.format(**data)
+
+

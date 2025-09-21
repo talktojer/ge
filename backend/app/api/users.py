@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 import logging
 
 from ..models.base import get_db
-from ..core.auth import auth_service
+from ..core.auth import auth_service, get_current_user
 from ..core.user_service import user_service
 from ..core.coordinates import Coordinate
 from ..models.user import User
@@ -104,35 +104,6 @@ class LoginResponse(BaseModel):
     session_token: str
     token_type: str
     user: UserResponse
-
-
-# Dependency to get current user
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-) -> Dict[str, Any]:
-    """Get current authenticated user"""
-    token = credentials.credentials
-    
-    # Verify JWT token
-    payload = auth_service.verify_token(token, "access")
-    if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    # Get user from database
-    user_id = int(payload.get("sub"))
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user or not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found or inactive"
-        )
-    
-    return {"id": user.id, "userid": user.userid, "user": user}
 
 
 # User registration and authentication endpoints

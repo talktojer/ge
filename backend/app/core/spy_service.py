@@ -16,7 +16,6 @@ from ..models.ship import Ship
 from ..models.planet import Planet
 from ..models.item import Item
 from ..models.mail import Mail
-from ..core.communication_service import communication_service
 
 
 class SpyService:
