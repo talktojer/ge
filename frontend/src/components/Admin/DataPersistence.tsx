@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
-import { api } from '../../services/api';
+import api from '../../services/api';
 
 const DataPersistenceContainer = styled.div`
   padding: 20px;

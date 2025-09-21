@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../store';
-import { api } from '../../services/api';
+import api from '../../services/api';
 import { 
   AdminStatsResponse, 
   ConfigParameter, 

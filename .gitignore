@@ -1,0 +1,4 @@
+backend/celerybeat-schedule
+backend/alembic/versions/4cf75236c443_add_authentication_fields_and_tables.py
+backend/alembic/versions/54eab7299907_initial_database_schema.py
+backend/alembic/versions/66eef6ec8398_merge_ship_types_and_security_tables_.py

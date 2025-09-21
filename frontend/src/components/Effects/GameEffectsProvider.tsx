@@ -343,7 +343,7 @@ const GameEffectsProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [screenFlash, setScreenFlash] = useState<{ color: string; duration: number } | null>(null);
   
   const audioManagerRef = useRef<AudioManager>(new AudioManager());
-  const gameUpdates = useAppSelector(state => state.game.updates);
+  const gameUpdates = useAppSelector(state => state.game.real_time_updates);
 
   // Initialize audio effects
   useEffect(() => {
