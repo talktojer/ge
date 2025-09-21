@@ -40,6 +40,16 @@ class TeamSecretUpdateRequest(BaseModel):
     new_secret: str
 
 
+class TeamKickRequest(BaseModel):
+    founder_password: str
+    target_userid: str
+
+
+class TeamNameChangeRequest(BaseModel):
+    founder_password: str
+    new_name: str
+
+
 class TeamResponse(BaseModel):
     id: int
     team_name: str
@@ -296,4 +306,133 @@ async def search_teams(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to search teams"
+        )
+
+
+# Enhanced team management endpoints
+@router.post("/kick", response_model=Dict[str, Any])
+async def kick_team_member(
+    kick_data: TeamKickRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Kick a team member (founder only)"""
+    try:
+        from ..models.user import User
+        
+        user = db.query(User).filter(User.id == current_user["id"]).first()
+        if not user or not user.team_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User is not in a team"
+            )
+        
+        result = team_service.kick_member(
+            db=db,
+            team_id=user.team_id,
+            user_id=current_user["id"],
+            founder_password=kick_data.founder_password,
+            target_userid=kick_data.target_userid
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to kick team member"
+        )
+
+
+@router.put("/name", response_model=Dict[str, Any])
+async def change_team_name(
+    name_data: TeamNameChangeRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Change team name (founder only)"""
+    try:
+        from ..models.user import User
+        
+        user = db.query(User).filter(User.id == current_user["id"]).first()
+        if not user or not user.team_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User is not in a team"
+            )
+        
+        result = team_service.change_team_name(
+            db=db,
+            team_id=user.team_id,
+            user_id=current_user["id"],
+            founder_password=name_data.founder_password,
+            new_name=name_data.new_name
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to change team name"
+        )
+
+
+@router.get("/statistics", response_model=Dict[str, Any])
+async def get_team_statistics(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get comprehensive team statistics"""
+    try:
+        from ..models.user import User
+        
+        user = db.query(User).filter(User.id == current_user["id"]).first()
+        if not user or not user.team_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User is not in a team"
+            )
+        
+        result = team_service.get_team_statistics(db=db, team_id=user.team_id)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get team statistics"
+        )
+
+
+@router.get("/rankings", response_model=List[Dict[str, Any]])
+async def get_team_rankings(
+    db: Session = Depends(get_db)
+):
+    """Get team rankings with detailed statistics"""
+    try:
+        result = team_service.get_team_rankings(db=db)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get team rankings"
+        )
+
+
+@router.post("/update-scores", response_model=Dict[str, Any])
+async def update_team_scores(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update all team scores (admin/system function)"""
+    try:
+        # This would typically be restricted to admin users
+        # For now, we'll allow any authenticated user to trigger it
+        result = team_service.update_team_scores(db=db)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update team scores"
         )

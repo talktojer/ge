@@ -20,6 +20,8 @@ class TeamService:
     
     def __init__(self):
         self.auth_service = auth_service
+        self.team_bonus = 10  # TEAMBONU from original game - bonus per member
+        self.max_teams = 50   # Maximum number of teams allowed
     
     def create_team(self, db: Session, user_id: int, team_name: str, password: str = None, secret: str = None) -> Dict[str, Any]:
         """Create a new team"""
@@ -325,6 +327,216 @@ class TeamService:
             }
             for team in teams
         ]
+    
+    def calculate_team_score(self, db: Session, team_id: int) -> int:
+        """
+        Calculate team score using original game formula:
+        TEAM SCORE = (A/B) + (C*B)
+        where: A = sum of all team members individual scores
+               B = number of team members  
+               C = bonus amount for each member (TEAMBONU)
+        """
+        team = db.query(Team).filter(Team.id == team_id).first()
+        if not team:
+            return 0
+        
+        # Get all team members and their scores
+        members = db.query(User).filter(User.team_id == team_id).all()
+        
+        if not members:
+            return 0
+        
+        # Calculate A = sum of all team member scores
+        total_member_scores = sum(member.score for member in members)
+        
+        # Calculate B = number of team members
+        member_count = len(members)
+        
+        # Calculate C = bonus per member (TEAMBONU)
+        bonus_per_member = self.team_bonus
+        
+        # Apply formula: (A/B) + (C*B)
+        team_score = (total_member_scores // member_count) + (bonus_per_member * member_count)
+        
+        return team_score
+    
+    def update_team_scores(self, db: Session) -> Dict[str, Any]:
+        """Update all team scores based on member scores (called during tick processing)"""
+        teams = db.query(Team).filter(Team.flag == 1).all()  # Active teams only
+        
+        updated_count = 0
+        for team in teams:
+            old_score = team.teamscore
+            new_score = self.calculate_team_score(db, team.id)
+            
+            if old_score != new_score:
+                team.teamscore = new_score
+                updated_count += 1
+        
+        db.commit()
+        
+        return {
+            "message": f"Updated scores for {updated_count} teams",
+            "updated_count": updated_count
+        }
+    
+    def kick_member(self, db: Session, team_id: int, user_id: int, founder_password: str, target_userid: str) -> Dict[str, Any]:
+        """Kick a team member (founder only)"""
+        # Verify founder password
+        team = db.query(Team).filter(Team.id == team_id).first()
+        if not team or team.secret != founder_password:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid founder password"
+            )
+        
+        # Find target user
+        target_user = db.query(User).filter(
+            User.userid == target_userid,
+            User.team_id == team_id
+        ).first()
+        
+        if not target_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found in team"
+            )
+        
+        # Remove user from team
+        target_user.team_id = None
+        target_user.teamcode = 0
+        team.teamcount -= 1
+        
+        # If team is empty, deactivate it
+        if team.teamcount <= 0:
+            team.flag = 0  # Inactive
+            team.teamcount = 0
+        
+        db.commit()
+        
+        return {
+            "message": f"Successfully kicked {target_userid} from team",
+            "team_name": team.team_name
+        }
+    
+    def change_team_name(self, db: Session, team_id: int, user_id: int, founder_password: str, new_name: str) -> Dict[str, Any]:
+        """Change team name (founder only)"""
+        # Verify founder password
+        team = db.query(Team).filter(Team.id == team_id).first()
+        if not team or team.secret != founder_password:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid founder password"
+            )
+        
+        # Check if new name is already taken
+        existing_team = db.query(Team).filter(
+            Team.team_name == new_name,
+            Team.id != team_id
+        ).first()
+        
+        if existing_team:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Team name already taken"
+            )
+        
+        old_name = team.team_name
+        team.team_name = new_name
+        db.commit()
+        
+        return {
+            "message": f"Team name changed from '{old_name}' to '{new_name}'",
+            "new_name": new_name
+        }
+    
+    def get_team_statistics(self, db: Session, team_id: int) -> Dict[str, Any]:
+        """Get comprehensive team statistics"""
+        team = db.query(Team).filter(Team.id == team_id).first()
+        if not team:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Team not found"
+            )
+        
+        # Get team members with detailed stats
+        members = db.query(User).filter(User.team_id == team_id).all()
+        
+        # Calculate statistics
+        total_score = sum(member.score for member in members)
+        total_kills = sum(member.kills for member in members)
+        total_planets = sum(member.planets for member in members)
+        total_cash = sum(member.cash for member in members)
+        total_population = sum(member.population for member in members)
+        
+        avg_score = total_score // len(members) if members else 0
+        avg_kills = total_kills // len(members) if members else 0
+        avg_planets = total_planets // len(members) if members else 0
+        
+        return {
+            "team": {
+                "id": team.id,
+                "team_name": team.team_name,
+                "team_code": team.team_code,
+                "teamscore": team.teamscore,
+                "teamcount": team.teamcount,
+                "created_at": team.created_at.isoformat()
+            },
+            "statistics": {
+                "total_score": total_score,
+                "total_kills": total_kills,
+                "total_planets": total_planets,
+                "total_cash": total_cash,
+                "total_population": total_population,
+                "average_score": avg_score,
+                "average_kills": avg_kills,
+                "average_planets": avg_planets,
+                "member_count": len(members)
+            },
+            "members": [
+                {
+                    "id": member.id,
+                    "userid": member.userid,
+                    "score": member.score,
+                    "kills": member.kills,
+                    "planets": member.planets,
+                    "cash": member.cash,
+                    "population": member.population,
+                    "last_login": member.last_login.isoformat() if member.last_login else None
+                }
+                for member in members
+            ]
+        }
+    
+    def get_team_rankings(self, db: Session) -> List[Dict[str, Any]]:
+        """Get team rankings with detailed statistics"""
+        teams = db.query(Team).filter(
+            Team.flag == 1,  # Active teams only
+            Team.teamcount > 0  # Teams with members
+        ).order_by(Team.teamscore.desc()).all()
+        
+        rankings = []
+        for i, team in enumerate(teams, 1):
+            # Get member statistics for this team
+            members = db.query(User).filter(User.team_id == team.id).all()
+            total_score = sum(member.score for member in members)
+            total_kills = sum(member.kills for member in members)
+            total_planets = sum(member.planets for member in members)
+            
+            rankings.append({
+                "rank": i,
+                "team_name": team.team_name,
+                "team_code": team.team_code,
+                "teamscore": team.teamscore,
+                "teamcount": team.teamcount,
+                "total_member_score": total_score,
+                "total_kills": total_kills,
+                "total_planets": total_planets,
+                "average_member_score": total_score // len(members) if members else 0,
+                "created_at": team.created_at.isoformat()
+            })
+        
+        return rankings
     
     def _generate_team_code(self, db: Session) -> int:
         """Generate a unique team code"""

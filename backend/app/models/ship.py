@@ -9,75 +9,81 @@ from .base import Base
 
 
 class ShipType(Base):
-    """Ship type definitions based on SHIP structure"""
+    """Ship type definitions based on SHIP structure - USER, CYBORG, or DROID"""
     __tablename__ = "ship_types"
     
     id = Column(Integer, primary_key=True, index=True)
-    typename = Column(String(50), nullable=False)  # SHIP.typename
-    shipname = Column(String(50), nullable=False)  # SHIP.shipname
-    
-    # Ship capabilities (from SHIP structure)
-    max_shields = Column(Integer, default=0)       # SHIP.max_shlds
-    max_phasers = Column(Integer, default=0)       # SHIP.max_phasr
-    max_torpedoes = Column(Integer, default=0)     # SHIP.max_torps
-    max_missiles = Column(Integer, default=0)      # SHIP.max_missl
-    
-    # Special equipment flags
-    has_decoy = Column(Boolean, default=False)     # SHIP.has_decoy
-    has_jammer = Column(Boolean, default=False)    # SHIP.has_jam
-    has_zipper = Column(Boolean, default=False)    # SHIP.has_zip
-    has_mine = Column(Boolean, default=False)      # SHIP.has_mine
-    
-    # Performance characteristics
-    max_attack = Column(Integer, default=0)        # SHIP.max_attk
-    max_cloak = Column(Integer, default=0)         # SHIP.max_cloak
-    max_acceleration = Column(Integer, default=0)  # SHIP.max_accel
-    max_warp = Column(Integer, default=0)          # SHIP.max_warp
-    max_tons = Column(BigInteger, default=0)       # SHIP.max_tons
-    max_price = Column(BigInteger, default=0)      # SHIP.max_price
-    max_points = Column(Integer, default=0)        # SHIP.max_points
-    max_type = Column(Integer, default=0)          # SHIP.max_type
-    scan_range = Column(Integer, default=0)        # SHIP.scanrange
-    
-    # AI behavior settings
-    cybs_can_attack = Column(Boolean, default=True)  # SHIP.cybs_can_att
-    lowest_to_attack = Column(Integer, default=1)    # SHIP.lowest_to_attk
-    no_claim = Column(Boolean, default=False)        # SHIP.noclaim
-    total_to_create = Column(Integer, default=0)     # SHIP.tot_to_create
-    tough_factor = Column(Integer, default=0)        # SHIP.tough_factor
-    damage_factor = Column(Integer, default=0)       # SHIP.damfact
-    
-    # Timestamps
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
-    def __repr__(self):
-        return f"<ShipType(typename='{self.typename}', shipname='{self.shipname}')>"
-
-
-class ShipClass(Base):
-    """Ship class definitions for different ship types"""
-    __tablename__ = "ship_classes"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(50), nullable=False)
+    type_name = Column(String(20), nullable=False, unique=True)  # USER, CYBORG, DROID
     description = Column(Text)
-    ship_type_id = Column(Integer, ForeignKey("ship_types.id"))
-    
-    # Class-specific settings
-    class_number = Column(Integer, nullable=False)
-    is_available = Column(Boolean, default=True)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
-    ship_type = relationship("ShipType")
+    ship_classes = relationship("ShipClass", back_populates="ship_type")
+    
+    def __repr__(self):
+        return f"<ShipType(type_name='{self.type_name}')>"
+
+
+class ShipClass(Base):
+    """Ship class definitions for different ship types (based on SHIP structure)"""
+    __tablename__ = "ship_classes"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    class_number = Column(Integer, nullable=False)  # S01, S02, etc.
+    typename = Column(String(50), nullable=False)  # SHIP.typename (class name)
+    shipname = Column(String(50), nullable=False)  # SHIP.shipname (ship title name)
+    ship_type_id = Column(Integer, ForeignKey("ship_types.id"), nullable=False)
+    
+    # Ship capabilities (from SHIP structure)
+    max_shields = Column(Integer, default=0)       # SHIP.max_shlds (0-19)
+    max_phasers = Column(Integer, default=0)       # SHIP.max_phasr (0-19)
+    max_torpedoes = Column(Integer, default=0)     # SHIP.max_torps (boolean)
+    max_missiles = Column(Integer, default=0)      # SHIP.max_missl (boolean)
+    
+    # Special equipment flags
+    has_decoy = Column(Boolean, default=False)     # SHIP.has_decoy
+    has_jammer = Column(Boolean, default=False)    # SHIP.has_jam
+    has_zipper = Column(Boolean, default=False)    # SHIP.has_zip
+    has_mine = Column(Boolean, default=False)      # SHIP.has_mine
+    has_attack_planet = Column(Boolean, default=False)  # Planet attack capability
+    has_cloaking = Column(Boolean, default=False)  # SHIP.max_cloak (boolean)
+    
+    # Performance characteristics
+    max_acceleration = Column(Integer, default=0)  # SHIP.max_accel (0-32767)
+    max_warp = Column(Integer, default=0)          # SHIP.max_warp (0-255)
+    max_tons = Column(BigInteger, default=0)       # SHIP.max_tons (cargo capacity)
+    max_price = Column(BigInteger, default=0)      # SHIP.max_price (purchase price)
+    max_points = Column(Integer, default=0)        # SHIP.max_points (kill points)
+    scan_range = Column(Integer, default=0)        # SHIP.scanrange (1-10000000)
+    
+    # AI behavior settings (for CYBORG/DROID ships)
+    cybs_can_attack = Column(Boolean, default=True)  # SHIP.cybs_can_att
+    number_to_attack = Column(Integer, default=0)    # Number of cybs to attack this class
+    lowest_to_attack = Column(Integer, default=1)    # SHIP.lowest_to_attk
+    no_claim = Column(Boolean, default=False)        # SHIP.noclaim
+    total_to_create = Column(Integer, default=0)     # SHIP.tot_to_create
+    tough_factor = Column(Integer, default=0)        # SHIP.tough_factor (0-1)
+    damage_factor = Column(Integer, default=90)      # SHIP.damfact (damage effect)
+    
+    # System flags
+    is_active = Column(Boolean, default=True)      # Whether this class is available
+    help_message = Column(Text)                    # Additional help text
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    ship_type = relationship("ShipType", back_populates="ship_classes")
     ships = relationship("Ship", back_populates="ship_class")
     
     def __repr__(self):
-        return f"<ShipClass(name='{self.name}', class_number={self.class_number})>"
+        return f"<ShipClass(class_number={self.class_number}, typename='{self.typename}')>"
+
+
 
 
 class Ship(Base):
@@ -93,8 +99,8 @@ class Ship(Base):
     shipname = Column(String(35), nullable=False)  # WARSHP.shipname
     
     # Ship class and type
-    ship_class_id = Column(Integer, ForeignKey("ship_classes.id"))
-    shpclass = Column(Integer, default=1)  # WARSHP.shpclass - ship class display
+    ship_class_id = Column(Integer, ForeignKey("ship_classes.id"), nullable=False)
+    shpclass = Column(Integer, default=1)  # WARSHP.shpclass - ship class display number
     
     # Navigation (from WARSHP)
     heading = Column(Float, default=0.0)    # WARSHP.heading - current heading

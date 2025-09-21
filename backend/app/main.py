@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 import os
 
 # Import API routers - lazy import to avoid startup issues
-from .api import users, teams
+from .api import users, teams, ships
 
 # Create FastAPI app
 app = FastAPI(
@@ -42,10 +42,18 @@ async def health_check():
 
 # Include API routers - lazy import
 def include_routers():
-    from .api import game_engine
+    from .api import game_engine, communications, wormholes, beacons, mines, spies, zippers, admin
     app.include_router(game_engine.router, prefix="/api")
     app.include_router(users.router, prefix="/api")
     app.include_router(teams.router, prefix="/api")
+    app.include_router(ships.router, prefix="/api")
+    app.include_router(communications.router)
+    app.include_router(wormholes.router, prefix="/api")
+    app.include_router(beacons.router, prefix="/api")
+    app.include_router(mines.router, prefix="/api")
+    app.include_router(spies.router, prefix="/api")
+    app.include_router(zippers.router, prefix="/api")
+    app.include_router(admin.router, prefix="/api")
 
 # Include routers after app creation
 include_routers()
