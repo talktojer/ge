@@ -7,7 +7,6 @@ import {
   FaRocket, 
   FaShieldAlt,
   FaExclamationTriangle,
-  FaTarget,
   FaFire,
   FaLock,
   FaUnlock,
@@ -578,7 +577,7 @@ const CombatInterface: React.FC<{ shipId: number }> = ({ shipId }) => {
     switch (type) {
       case 'phaser': return <FaBolt />;
       case 'torpedo': return <FaRocket />;
-      case 'missile': return <FaTarget />;
+      case 'missile': return <FaCrosshairs />;
       case 'ion_cannon': return <FaFire />;
       default: return <FaCrosshairs />;
     }
@@ -614,7 +613,7 @@ const CombatInterface: React.FC<{ shipId: number }> = ({ shipId }) => {
               onClick={() => handleTargetSelect(target)}
               title={`${target.name} - ${target.distance}m`}
             >
-              <FaTarget />
+              <FaCrosshairs />
             </CombatTarget>
           ))}
           
