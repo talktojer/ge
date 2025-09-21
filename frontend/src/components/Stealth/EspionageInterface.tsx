@@ -19,7 +19,6 @@ import {
   FaCrosshairs,
   FaRocket,
   FaBolt,
-  FaSearch,
   FaSkull,
   FaHeart,
   FaStar,
