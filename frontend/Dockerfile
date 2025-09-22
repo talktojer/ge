@@ -7,8 +7,11 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --omit=dev
+# Install dependencies (including dev dependencies needed for build)
+# Clean install with legacy-peer-deps and force to handle dependency conflicts
+RUN rm -rf node_modules package-lock.json && \
+    npm install --legacy-peer-deps --force && \
+    npm install ajv@^8.17.1 ajv-keywords@^5.1.0 --legacy-peer-deps --force
 
 # Copy source code
 COPY . .

@@ -375,7 +375,7 @@ const FormSelect = styled.select`
   }
 `;
 
-const IntelReport = styled.div`
+const IntelReport = styled.div<{ importance: 'low' | 'medium' | 'high' | 'critical' }>`
   padding: 12px;
   background: #1a1a1a;
   border-left: 4px solid ${props => {
@@ -545,7 +545,7 @@ const EspionageInterface: React.FC<{ shipId: number }> = ({ shipId }) => {
       deployment_date: new Date().toISOString(),
       last_contact: new Date().toISOString(),
       cover_identity: formData.cover_identity,
-      equipment: formData.equipment.split(',').map(e => e.trim())
+      equipment: formData.equipment.split(',').map((e: string) => e.trim())
     };
     setSpies(prev => [...prev, newSpy]);
     setDeploymentMode(null);

@@ -6,7 +6,7 @@ import {
   FaCrosshairs, 
   FaEye, 
   FaExclamationTriangle,
-  FaShield,
+  FaShieldAlt,
   FaBolt,
   FaCircle,
   FaDotCircle,
@@ -324,11 +324,11 @@ const TacticalDisplay: React.FC<{ shipId: number }> = ({ shipId }) => {
     timestamp: new Date().toISOString()
   });
   const [filters, setFilters] = useState({
-    ships: true,
-    planets: true,
-    mines: true,
-    beacons: true,
-    wormholes: true,
+    ship: true,
+    planet: true,
+    mine: true,
+    beacon: true,
+    wormhole: true,
     debris: false
   });
 

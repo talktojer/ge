@@ -5,6 +5,7 @@ import uiSlice from './slices/uiSlice';
 import shipsSlice from './slices/shipsSlice';
 import planetsSlice from './slices/planetsSlice';
 import communicationSlice from './slices/communicationSlice';
+import notificationSlice from './slices/notificationSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     ships: shipsSlice,
     planets: planetsSlice,
     communication: communicationSlice,
+    notifications: notificationSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

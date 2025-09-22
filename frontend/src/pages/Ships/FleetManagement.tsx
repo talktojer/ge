@@ -264,7 +264,7 @@ const FleetManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
 
   useEffect(() => {
-    dispatch(fetchShips());
+    dispatch(fetchShips({}));
   }, [dispatch]);
 
   const filteredShips = ships.filter(ship =>

@@ -27,36 +27,36 @@ const initialState: GameSliceState = {
 };
 
 // Async thunks
-export const getGameState = createAsyncThunk(
+export const getGameState = createAsyncThunk<GameState, void>(
   'game/getGameState',
   async (_, { rejectWithValue }) => {
     try {
       const response = await gameApi.getGameState();
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to get game state');
     }
   }
 );
 
-export const selectShip = createAsyncThunk(
+export const selectShip = createAsyncThunk<Ship, number>(
   'game/selectShip',
   async (shipId: number, { rejectWithValue }) => {
     try {
       const response = await gameApi.getShip(shipId);
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to select ship');
     }
   }
 );
 
-export const selectPlanet = createAsyncThunk(
+export const selectPlanet = createAsyncThunk<Planet, number>(
   'game/selectPlanet',
   async (planetId: number, { rejectWithValue }) => {
     try {
       const response = await gameApi.getPlanet(planetId);
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to select planet');
     }
@@ -110,8 +110,12 @@ const gameSlice = createSlice({
       })
       .addCase(getGameState.fulfilled, (state, action) => {
         state.isLoading = false;
+        state.current_user = action.payload.current_user;
+        state.selected_ship = action.payload.selected_ship;
+        state.selected_planet = action.payload.selected_planet;
         state.game_time = action.payload.game_time;
         state.tick_number = action.payload.tick_number;
+        state.is_connected = action.payload.is_connected;
       })
       .addCase(getGameState.rejected, (state, action) => {
         state.isLoading = false;

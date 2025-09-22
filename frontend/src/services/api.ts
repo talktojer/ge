@@ -47,17 +47,14 @@ api.interceptors.response.use(
 
 // Auth API
 export const authApi = {
-  login: (credentials: LoginForm): Promise<AxiosResponse<ApiResponse<{ access_token: string; user: User }>>> =>
-    api.post('/auth/login', credentials),
+  login: (credentials: LoginForm): Promise<AxiosResponse<{ access_token: string; refresh_token: string; session_token: string; token_type: string; user: User }>> =>
+    api.post('/api/users/login', credentials),
   
-  register: (userData: RegisterForm): Promise<AxiosResponse<ApiResponse<User>>> =>
-    api.post('/auth/register', userData),
+  register: (userData: RegisterForm): Promise<AxiosResponse<{ user: User; message: string }>> =>
+    api.post('/api/users/register', userData),
   
-  getCurrentUser: (): Promise<AxiosResponse<ApiResponse<User>>> =>
-    api.get('/auth/me'),
-  
-  refreshToken: (): Promise<AxiosResponse<ApiResponse<{ access_token: string }>>> =>
-    api.post('/auth/refresh'),
+  getCurrentUser: (): Promise<AxiosResponse<{ user: User }>> =>
+    api.get('/api/users/profile'),
 };
 
 // Game API

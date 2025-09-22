@@ -49,7 +49,7 @@ export const getCurrentUser = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await authApi.getCurrentUser();
-      return response.data;
+      return response.data.user;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to get user');
     }

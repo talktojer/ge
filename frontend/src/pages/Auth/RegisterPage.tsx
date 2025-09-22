@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
-import { register, clearError } from '../../store/slices/authSlice';
+import { register as registerUser, clearError } from '../../store/slices/authSlice';
 import { RegisterForm } from '../../types';
 import styled from 'styled-components';
 
@@ -145,11 +145,11 @@ const RegisterPage: React.FC = () => {
 
   const onSubmit = async (data: RegisterForm) => {
     try {
-      await dispatch(register(data)).unwrap();
+      await (dispatch(registerUser(data)) as any).unwrap();
       toast.success('Registration successful! Please log in.');
       navigate('/login');
-    } catch (error) {
-      toast.error(error as string);
+    } catch (error: any) {
+      toast.error(error.message || error || 'Registration failed');
     }
   };
 

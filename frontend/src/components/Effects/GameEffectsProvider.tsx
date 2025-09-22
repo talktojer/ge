@@ -271,6 +271,10 @@ class AudioManager {
 
     try {
       const response = await fetch(url);
+      if (!response.ok) {
+        console.warn(`Sound file not found: ${url}`);
+        return;
+      }
       const arrayBuffer = await response.arrayBuffer();
       const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
       this.sounds.set(name, audioBuffer);
@@ -308,9 +312,16 @@ class AudioManager {
       this.ambientMusic = new Audio(`/music/${trackName}.mp3`);
       this.ambientMusic.loop = true;
       this.ambientMusic.volume = this.masterVolume * this.musicVolume;
-      this.ambientMusic.play().catch(error => {
-        console.warn('Failed to play ambient music:', error);
-      });
+      
+      // Only try to play if user has interacted with the page
+      if (document.visibilityState === 'visible') {
+        this.ambientMusic.play().catch(error => {
+          // Suppress autoplay policy errors - music will start when user interacts
+          if (error.name !== 'NotAllowedError') {
+            console.warn('Failed to play ambient music:', error);
+          }
+        });
+      }
     }
   }
 
@@ -354,8 +365,24 @@ const GameEffectsProvider: React.FC<{ children: React.ReactNode }> = ({ children
       audioManager.loadSound(name, url);
     });
 
-    // Set initial ambient music
-    audioManager.setAmbientMusic('space_ambient');
+    // Set up user interaction listener for audio
+    const enableAudio = () => {
+      audioManager.setAmbientMusic('space_ambient');
+      document.removeEventListener('click', enableAudio);
+      document.removeEventListener('keydown', enableAudio);
+      document.removeEventListener('touchstart', enableAudio);
+    };
+
+    // Wait for user interaction before starting audio
+    document.addEventListener('click', enableAudio, { once: true });
+    document.addEventListener('keydown', enableAudio, { once: true });
+    document.addEventListener('touchstart', enableAudio, { once: true });
+
+    return () => {
+      document.removeEventListener('click', enableAudio);
+      document.removeEventListener('keydown', enableAudio);
+      document.removeEventListener('touchstart', enableAudio);
+    };
   }, []);
 
   // Handle game events for automatic effects

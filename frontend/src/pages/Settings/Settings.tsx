@@ -136,12 +136,18 @@ const Select = styled.select`
   }
 `;
 
-const Button = styled.button`
+const Button = styled.button<{ variant?: 'primary' | 'secondary' | 'danger' }>`
   padding: 12px 24px;
-  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  background: ${props => {
+    switch (props.variant) {
+      case 'secondary': return '#333';
+      case 'danger': return '#ef4444';
+      default: return 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)';
+    }
+  }};
   border: none;
   border-radius: 8px;
-  color: #000;
+  color: ${props => props.variant === 'secondary' || props.variant === 'danger' ? '#fff' : '#000'};
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -291,7 +297,7 @@ const Settings: React.FC = () => {
               <SettingDescription>Add an extra layer of security to your account</SettingDescription>
             </SettingInfo>
             <SettingControl>
-              <Button variant="secondary" style={{ background: '#333', color: '#fff' }}>
+              <Button variant="secondary">
                 Enable 2FA
               </Button>
             </SettingControl>
@@ -303,7 +309,7 @@ const Settings: React.FC = () => {
               <SettingDescription>Update your account password</SettingDescription>
             </SettingInfo>
             <SettingControl>
-              <Button variant="secondary" style={{ background: '#333', color: '#fff' }}>
+              <Button variant="secondary">
                 Change Password
               </Button>
             </SettingControl>

@@ -29,7 +29,7 @@ const initialState: PlanetsState = {
 };
 
 // Async thunks
-export const fetchPlanets = createAsyncThunk(
+export const fetchPlanets = createAsyncThunk<PaginatedResponse<Planet>, { page?: number; per_page?: number }>(
   'planets/fetchPlanets',
   async (params: { page?: number; per_page?: number } = {}, { rejectWithValue }) => {
     try {
@@ -41,36 +41,36 @@ export const fetchPlanets = createAsyncThunk(
   }
 );
 
-export const getPlanet = createAsyncThunk(
+export const getPlanet = createAsyncThunk<Planet, number>(
   'planets/getPlanet',
   async (planetId: number, { rejectWithValue }) => {
     try {
       const response = await planetsApi.getPlanet(planetId);
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to get planet');
     }
   }
 );
 
-export const colonizePlanet = createAsyncThunk(
+export const colonizePlanet = createAsyncThunk<Planet, number>(
   'planets/colonizePlanet',
   async (planetId: number, { rejectWithValue }) => {
     try {
       const response = await planetsApi.colonizePlanet(planetId);
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to colonize planet');
     }
   }
 );
 
-export const updatePlanet = createAsyncThunk(
+export const updatePlanet = createAsyncThunk<Planet, { planetId: number; planetData: Partial<Planet> }>(
   'planets/updatePlanet',
   async ({ planetId, planetData }: { planetId: number; planetData: Partial<Planet> }, { rejectWithValue }) => {
     try {
       const response = await planetsApi.updatePlanet(planetId, planetData);
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to update planet');
     }

@@ -30,31 +30,31 @@ const initialState: CommunicationState = {
 };
 
 // Async thunks
-export const fetchMessages = createAsyncThunk(
+export const fetchMessages = createAsyncThunk<Message[], string>(
   'communication/fetchMessages',
   async (channel: string, { rejectWithValue }) => {
     try {
       // This would be replaced with actual API calls
-      return [];
+      return [] as Message[];
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to fetch messages');
     }
   }
 );
 
-export const sendMessage = createAsyncThunk(
+export const sendMessage = createAsyncThunk<Message, Partial<Message>>(
   'communication/sendMessage',
   async (messageData: Partial<Message>, { rejectWithValue }) => {
     try {
       // This would be replaced with actual API calls
-      return messageData;
+      return messageData as Message;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to send message');
     }
   }
 );
 
-export const markMessageAsRead = createAsyncThunk(
+export const markMessageAsRead = createAsyncThunk<number, number>(
   'communication/markMessageAsRead',
   async (messageId: number, { rejectWithValue }) => {
     try {

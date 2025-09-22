@@ -7,6 +7,7 @@ export interface User {
   created_at: string;
   last_login?: string;
   is_active: boolean;
+  is_admin: boolean;
 }
 
 export interface Team {
@@ -95,6 +96,7 @@ export interface WebSocketMessage {
 export interface ConfigParameter {
   value: any;
   type: string;
+  config_type: string;
   category: string;
   description: string;
   min_value?: number;
@@ -156,7 +158,7 @@ export interface AdminStatsResponse {
 }
 
 export interface GameUpdate {
-  type: 'ship_update' | 'planet_update' | 'combat_update' | 'message' | 'tick';
+  type: 'ship_update' | 'planet_update' | 'combat_update' | 'message' | 'tick' | 'wormhole_discovered' | 'spy_captured' | 'team_battle' | 'alliance_formed' | 'diplomatic_message' | 'trade_proposal' | 'battle_visualization' | 'sector_activity';
   data: any;
   timestamp: string;
 }

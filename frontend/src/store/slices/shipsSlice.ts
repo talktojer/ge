@@ -29,7 +29,7 @@ const initialState: ShipsState = {
 };
 
 // Async thunks
-export const fetchShips = createAsyncThunk(
+export const fetchShips = createAsyncThunk<PaginatedResponse<Ship>, { page?: number; per_page?: number }>(
   'ships/fetchShips',
   async (params: { page?: number; per_page?: number } = {}, { rejectWithValue }) => {
     try {
@@ -41,48 +41,48 @@ export const fetchShips = createAsyncThunk(
   }
 );
 
-export const getShip = createAsyncThunk(
+export const getShip = createAsyncThunk<Ship, number>(
   'ships/getShip',
   async (shipId: number, { rejectWithValue }) => {
     try {
       const response = await shipsApi.getShip(shipId);
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to get ship');
     }
   }
 );
 
-export const createShip = createAsyncThunk(
+export const createShip = createAsyncThunk<Ship, Partial<Ship>>(
   'ships/createShip',
   async (shipData: Partial<Ship>, { rejectWithValue }) => {
     try {
       const response = await shipsApi.createShip(shipData);
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to create ship');
     }
   }
 );
 
-export const updateShip = createAsyncThunk(
+export const updateShip = createAsyncThunk<Ship, { shipId: number; shipData: Partial<Ship> }>(
   'ships/updateShip',
   async ({ shipId, shipData }: { shipId: number; shipData: Partial<Ship> }, { rejectWithValue }) => {
     try {
       const response = await shipsApi.updateShip(shipId, shipData);
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to update ship');
     }
   }
 );
 
-export const executeShipCommand = createAsyncThunk(
+export const executeShipCommand = createAsyncThunk<any, ShipCommand>(
   'ships/executeCommand',
   async (command: ShipCommand, { rejectWithValue }) => {
     try {
       const response = await shipsApi.executeCommand(command);
-      return response.data;
+      return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to execute command');
     }

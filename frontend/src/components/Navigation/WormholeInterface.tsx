@@ -740,27 +740,27 @@ const WormholeInterface: React.FC<{ shipId: number }> = ({ shipId }) => {
                 </SectionTitle>
                 <InfoItem>
                   <InfoLabel>Stability:</InfoLabel>
-                  <InfoValue color={selectedWormhole.stability > 70 ? '#22c55e' : selectedWormhole.stability > 40 ? '#eab308' : '#ef4444'}>
-                    {selectedWormhole.stability}%
+                  <InfoValue color={selectedWormhole!.stability > 70 ? '#22c55e' : selectedWormhole!.stability > 40 ? '#eab308' : '#ef4444'}>
+                    {selectedWormhole!.stability}%
                   </InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>Energy Cost:</InfoLabel>
-                  <InfoValue>{selectedWormhole.energy_cost} units</InfoValue>
+                  <InfoValue>{selectedWormhole!.energy_cost} units</InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>Travel Time:</InfoLabel>
-                  <InfoValue>{selectedWormhole.travel_time}s</InfoValue>
+                  <InfoValue>{selectedWormhole!.travel_time}s</InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>Usage Count:</InfoLabel>
-                  <InfoValue>{selectedWormhole.usage_count}</InfoValue>
+                  <InfoValue>{selectedWormhole!.usage_count}</InfoValue>
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>Status:</InfoLabel>
-                  <StatusIndicator status={selectedWormhole.status}>
+                  <StatusIndicator status={selectedWormhole!.status}>
                     <FaCircle size={6} />
-                    {selectedWormhole.status.toUpperCase()}
+                    {selectedWormhole!.status.toUpperCase()}
                   </StatusIndicator>
                 </InfoItem>
               </InfoSection>
@@ -768,9 +768,9 @@ const WormholeInterface: React.FC<{ shipId: number }> = ({ shipId }) => {
               <InfoSection>
                 <ControlButton
                   variant="primary"
-                  onClick={() => handleWormholeTravel(selectedWormhole.id)}
+                  onClick={() => handleWormholeTravel(selectedWormhole!.id)}
                   style={{ width: '100%' }}
-                  disabled={selectedWormhole.status === 'collapsing'}
+                  disabled={selectedWormhole!.status === 'collapsing'}
                 >
                   <FaRocket />
                   Initiate Travel
@@ -813,7 +813,7 @@ const WormholeInterface: React.FC<{ shipId: number }> = ({ shipId }) => {
                   {wormholes.map(wormhole => (
                     <WormholeItem
                       key={wormhole.id}
-                      selected={selectedWormhole?.id === wormhole.id}
+                      selected={Boolean(selectedWormhole && (selectedWormhole as WormholeConnection).id === wormhole.id)}
                       onClick={() => setSelectedWormhole(wormhole)}
                     >
                       <WormholeItemHeader>

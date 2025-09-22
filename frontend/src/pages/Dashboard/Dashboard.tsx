@@ -223,8 +223,8 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     dispatch(getGameState());
-    dispatch(fetchShips());
-    dispatch(fetchPlanets());
+    dispatch(fetchShips({}));
+    dispatch(fetchPlanets({}));
   }, [dispatch]);
 
   const activeShips = ships.filter(ship => ship.is_active).length;
