@@ -21,8 +21,8 @@ services:
   # Redis (for Celery broker and cache)
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6380:6379"  # Not exposed externally, only accessible within Docker network
     volumes:
       - redis_data:/data
     healthcheck:
