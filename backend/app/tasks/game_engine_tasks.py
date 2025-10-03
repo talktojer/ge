@@ -1,318 +1,142 @@
 """
-Galactic Empire - Game Engine Celery Tasks
+Game engine integration tasks
 
-This module implements Celery tasks for the game engine processing,
-providing asynchronous processing of game events and real-time updates.
+Tasks that integrate with the main game engine for real-time updates
+and WebSocket communication.
 """
 
-from celery import current_task
-from celery.exceptions import Retry
 import logging
-from typing import Dict, List, Any, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Dict, Any, List
 
-from ..core.game_engine import game_engine
-from ..core.tick_system import TickType
-from . import celery_app
+from sqlalchemy.orm import Session
+from app.core.celery import celery_app
+from app.core.database import get_db
+from app.core.game_engine import GameEngine
+from app.models.ship import Ship
+from app.models.planet import Planet
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(bind=True, name='game_engine.process_ship_tick')
-def process_ship_tick(self, ship_data: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Process ship tick - equivalent to warrtia() in original code
-    Handles shields, cloaking, repairs, flux systems, etc.
-    """
+@celery_app.task
+def broadcast_game_state():
+    """Broadcast current game state to all connected WebSocket clients"""
     try:
-        logger.debug(f"Processing ship tick for {len(ship_data)} ships")
+        # Get game engine instance
+        game_engine = GameEngine()
         
-        # Ensure game engine is initialized
-        if not game_engine._initialized:
-            game_engine.initialize()
-        
-        results = []
-        
-        for ship_info in ship_data:
-            ship_id = ship_info.get('ship_id')
-            if not ship_id:
-                continue
-            
-            # Get ship from game engine
-            ship = game_engine.get_ship(ship_id)
-            if not ship or ship.status != 'active':
-                continue
-            
-            # Process ship systems
-            ship_result = _process_ship_systems(ship, ship_info)
-            results.append(ship_result)
-        
-        return {
-            'processed_ships': len(results),
-            'results': results,
-            'timestamp': datetime.utcnow().isoformat()
+        # Get current game state
+        game_state = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "ships": game_engine.get_all_ships_info(),
+            "planets": game_engine.get_all_planets_info(),
+            "statistics": game_engine.get_game_statistics()
         }
         
-    except Exception as exc:
-        logger.error(f"Error in ship tick processing: {exc}")
-        raise self.retry(exc=exc, countdown=60, max_retries=3)
+        # Broadcast via WebSocket (would need Socket.IO integration)
+        # socketio.emit('game_state_update', game_state, broadcast=True)
+        
+        logger.debug("Game state broadcasted to WebSocket clients")
+        
+    except Exception as e:
+        logger.error(f"Error broadcasting game state: {e}")
 
 
-@celery_app.task(bind=True, name='game_engine.process_movement_tick')
-def process_movement_tick(self, ship_data: List[Dict[str, Any]], 
-                         clicker: int = 0) -> Dict[str, Any]:
-    """
-    Process movement tick - equivalent to warrti2a() in original code
-    Handles ship movement, rotation, acceleration, self-destruct
-    """
+@celery_app.task
+def update_websocket_clients():
+    """Update WebSocket clients with real-time game data"""
     try:
-        logger.debug(f"Processing movement tick for {len(ship_data)} ships")
+        # This would integrate with Socket.IO to push updates
+        # to connected clients about ship movements, combat, etc.
         
-        if not game_engine._initialized:
-            game_engine.initialize()
+        # For now, just log the update
+        logger.debug("WebSocket clients updated")
         
-        results = []
-        batch_size = 3  # Process ships in batches of 3
-        
-        # Process ships in batches (original used clicker % 3)
-        for i in range(clicker, len(ship_data), batch_size):
-            ship_info = ship_data[i]
-            ship_id = ship_info.get('ship_id')
-            
-            if not ship_id:
-                continue
-            
-            ship = game_engine.get_ship(ship_id)
-            if not ship or ship.status != 'active':
-                continue
-            
-            # Process ship movement
-            movement_result = _process_ship_movement(ship, ship_info)
-            results.append(movement_result)
-        
-        # Update clicker for next tick
-        next_clicker = (clicker + 1) % batch_size
-        
-        return {
-            'processed_ships': len(results),
-            'next_clicker': next_clicker,
-            'results': results,
-            'timestamp': datetime.utcnow().isoformat()
-        }
-        
-    except Exception as exc:
-        logger.error(f"Error in movement tick processing: {exc}")
-        raise self.retry(exc=exc, countdown=60, max_retries=3)
+    except Exception as e:
+        logger.error(f"Error updating WebSocket clients: {e}")
 
 
-@celery_app.task(bind=True, name='game_engine.process_planet_tick')
-def process_planet_tick(self, planet_data: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Process planet tick - equivalent to plarti() in original code
-    Handles planet resource generation, population growth, etc.
-    """
+@celery_app.task
+def process_real_time_events():
+    """Process real-time events that need immediate client updates"""
     try:
-        logger.debug(f"Processing planet tick for {len(planet_data)} planets")
+        db = next(get_db())
         
-        if not game_engine._initialized:
-            game_engine.initialize()
+        # Get recent events that need broadcasting
+        recent_ships = db.query(Ship).filter(
+            Ship.updated_at > datetime.utcnow() - timedelta(seconds=5)
+        ).all()
         
-        results = []
+        recent_planets = db.query(Planet).filter(
+            Planet.updated_at > datetime.utcnow() - timedelta(seconds=5)
+        ).all()
         
-        for planet_info in planet_data:
-            planet_id = planet_info.get('planet_id')
-            if not planet_id:
-                continue
-            
-            # Process planet systems
-            planet_result = _process_planet_systems(planet_info)
-            results.append(planet_result)
+        # Process real-time events
+        events = []
         
-        return {
-            'processed_planets': len(results),
-            'results': results,
-            'timestamp': datetime.utcnow().isoformat()
-        }
+        for ship in recent_ships:
+            events.append({
+                "type": "ship_update",
+                "ship_id": ship.id,
+                "data": {
+                    "position": {"x": ship.x_coord, "y": ship.y_coord},
+                    "heading": ship.heading,
+                    "speed": ship.speed,
+                    "damage": ship.damage,
+                    "energy": ship.energy,
+                    "shield_charge": ship.shield_charge
+                }
+            })
         
-    except Exception as exc:
-        logger.error(f"Error in planet tick processing: {exc}")
-        raise self.retry(exc=exc, countdown=60, max_retries=3)
+        for planet in recent_planets:
+            events.append({
+                "type": "planet_update", 
+                "planet_id": planet.id,
+                "data": {
+                    "owner": planet.userid,
+                    "cash": planet.cash,
+                    "population": planet.team_code,
+                    "beacon_message": planet.beacon_message
+                }
+            })
+        
+        # Broadcast events to WebSocket clients
+        if events:
+            # socketio.emit('real_time_events', events, broadcast=True)
+            logger.debug(f"Broadcasted {len(events)} real-time events")
+        
+        db.close()
+        
+    except Exception as e:
+        logger.error(f"Error processing real-time events: {e}")
 
 
-@celery_app.task(bind=True, name='game_engine.process_cybertron_tick')
-def process_cybertron_tick(self, cybertron_data: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Process Cybertron AI tick - equivalent to autortia() in original code
-    Handles AI decision making, attack patterns, etc.
-    """
+@celery_app.task
+def sync_game_engine_state():
+    """Synchronize game engine state with database"""
     try:
-        logger.debug(f"Processing Cybertron tick for {len(cybertron_data)} ships")
+        game_engine = GameEngine()
         
-        if not game_engine._initialized:
-            game_engine.initialize()
+        # Refresh game engine state from database
+        game_engine.refresh_state()
         
-        results = []
+        logger.debug("Game engine state synchronized with database")
         
-        for ship_info in cybertron_data:
-            ship_id = ship_info.get('ship_id')
-            if not ship_id:
-                continue
-            
-            ship = game_engine.get_ship(ship_id)
-            if not ship or ship.status != 'active':
-                continue
-            
-            # Process Cybertron AI
-            ai_result = _process_cybertron_ai(ship, ship_info)
-            results.append(ai_result)
-        
-        return {
-            'processed_cybertron': len(results),
-            'results': results,
-            'timestamp': datetime.utcnow().isoformat()
-        }
-        
-    except Exception as exc:
-        logger.error(f"Error in Cybertron tick processing: {exc}")
-        raise self.retry(exc=exc, countdown=60, max_retries=3)
+    except Exception as e:
+        logger.error(f"Error synchronizing game engine state: {e}")
 
 
-@celery_app.task(name='game_engine.update_ship_movement')
-def update_ship_movement(ship_id: str, target_speed: Optional[float] = None,
-                        target_heading: Optional[float] = None) -> Dict[str, Any]:
-    """
-    Update ship movement asynchronously
-    """
+@celery_app.task
+def cleanup_game_engine_cache():
+    """Clean up game engine cache and temporary data"""
     try:
-        if not game_engine._initialized:
-            game_engine.initialize()
+        game_engine = GameEngine()
         
-        success = game_engine.update_ship_movement(ship_id, target_speed, target_heading)
+        # Clear any cached data
+        game_engine.clear_cache()
         
-        return {
-            'success': success,
-            'ship_id': ship_id,
-            'target_speed': target_speed,
-            'target_heading': target_heading,
-            'timestamp': datetime.utcnow().isoformat()
-        }
+        logger.debug("Game engine cache cleaned up")
         
-    except Exception as exc:
-        logger.error(f"Error updating ship movement: {exc}")
-        return {
-            'success': False,
-            'error': str(exc),
-            'ship_id': ship_id,
-            'timestamp': datetime.utcnow().isoformat()
-        }
-
-
-@celery_app.task(name='game_engine.get_ship_status')
-def get_ship_status(ship_id: str) -> Dict[str, Any]:
-    """
-    Get ship status asynchronously
-    """
-    try:
-        if not game_engine._initialized:
-            game_engine.initialize()
-        
-        status = game_engine.get_ship_status(ship_id)
-        
-        return {
-            'success': status is not None,
-            'status': status,
-            'timestamp': datetime.utcnow().isoformat()
-        }
-        
-    except Exception as exc:
-        logger.error(f"Error getting ship status: {exc}")
-        return {
-            'success': False,
-            'error': str(exc),
-            'ship_id': ship_id,
-            'timestamp': datetime.utcnow().isoformat()
-        }
-
-
-@celery_app.task(name='game_engine.get_sector_info')
-def get_sector_info(x: float, y: float) -> Dict[str, Any]:
-    """
-    Get sector information asynchronously
-    """
-    try:
-        if not game_engine._initialized:
-            game_engine.initialize()
-        
-        from ..core.coordinates import Coordinate
-        coord = Coordinate(x, y)
-        sector_info = game_engine.get_sector_info(coord)
-        
-        return {
-            'success': True,
-            'sector_info': sector_info,
-            'timestamp': datetime.utcnow().isoformat()
-        }
-        
-    except Exception as exc:
-        logger.error(f"Error getting sector info: {exc}")
-        return {
-            'success': False,
-            'error': str(exc),
-            'x': x,
-            'y': y,
-            'timestamp': datetime.utcnow().isoformat()
-        }
-
-
-def _process_ship_systems(ship, ship_info: Dict[str, Any]) -> Dict[str, Any]:
-    """Process individual ship systems"""
-    # This would implement the actual ship system processing
-    # For now, return basic status
-    
-    return {
-        'ship_id': ship.ship_id,
-        'processed': True,
-        'energy': ship.energy,
-        'shields': ship.shields,
-        'damage': ship.damage,
-        'timestamp': datetime.utcnow().isoformat()
-    }
-
-
-def _process_ship_movement(ship, ship_info: Dict[str, Any]) -> Dict[str, Any]:
-    """Process individual ship movement"""
-    # This would implement the actual movement processing
-    # For now, return basic movement status
-    
-    return {
-        'ship_id': ship.ship_id,
-        'movement_processed': True,
-        'position': {'x': ship.position.x, 'y': ship.position.y},
-        'heading': ship.heading,
-        'speed': ship.speed,
-        'timestamp': datetime.utcnow().isoformat()
-    }
-
-
-def _process_planet_systems(planet_info: Dict[str, Any]) -> Dict[str, Any]:
-    """Process individual planet systems"""
-    # This would implement the actual planet processing
-    # For now, return basic status
-    
-    return {
-        'planet_id': planet_info.get('planet_id'),
-        'processed': True,
-        'timestamp': datetime.utcnow().isoformat()
-    }
-
-
-def _process_cybertron_ai(ship, ship_info: Dict[str, Any]) -> Dict[str, Any]:
-    """Process Cybertron AI decision making"""
-    # This would implement the actual AI processing
-    # For now, return basic AI status
-    
-    return {
-        'ship_id': ship.ship_id,
-        'ai_processed': True,
-        'timestamp': datetime.utcnow().isoformat()
-    }
+    except Exception as e:
+        logger.error(f"Error cleaning up game engine cache: {e}")

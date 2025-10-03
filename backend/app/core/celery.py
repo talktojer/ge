@@ -30,7 +30,11 @@ celery_app.conf.update(
     task_soft_time_limit=25 * 60,  # 25 minutes
     worker_prefetch_multiplier=1,
     worker_max_tasks_per_child=1000,
+    beat_schedule_filename='celerybeat-schedule',
+    beat_schedule_db_filename='celerybeat-schedule.db',
 )
+
+# Scheduler configuration will be imported when needed
 
 # Optional configuration for development
 if settings.environment == "development":

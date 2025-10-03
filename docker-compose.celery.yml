@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: galactic_empire
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis (for Celery broker and cache)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # FastAPI Application
+  web:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/galactic_empire
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Celery Worker
+  celery-worker:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.celery
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/galactic_empire
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - celery_logs:/app/logs
+    command: celery -A app.core.celery:celery_app worker --loglevel=info --concurrency=4
+    restart: unless-stopped
+
+  # Celery Beat Scheduler
+  celery-beat:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.celery
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/galactic_empire
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - celery_beat_data:/app/run
+    command: celery -A app.core.celery:celery_app beat --loglevel=info --schedule=celerybeat-schedule
+    restart: unless-stopped
+
+  # Flower Monitoring (optional)
+  flower:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.celery
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+    ports:
+      - "5555:5555"
+    command: celery -A app.core.celery:celery_app flower --port=5555 --address=0.0.0.0
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  celery_logs:
+  celery_beat_data:
+
+networks:
+  default:
+    name: galactic_empire_network

@@ -1,0 +1,38 @@
+# Dockerfile for Celery worker and beat scheduler
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Create directories for Celery
+RUN mkdir -p /app/logs /app/run
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV CELERY_BROKER_URL=redis://redis:6379/0
+ENV CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+# Expose ports (for Flower monitoring)
+EXPOSE 5555
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD celery -A app.core.celery:celery_app inspect ping || exit 1
+
+# Default command (can be overridden)
+CMD ["python", "start_celery.py"]
