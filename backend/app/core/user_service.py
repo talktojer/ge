@@ -75,6 +75,13 @@ class UserService:
                 "message": "User registered successfully. Email verification is disabled for now."
             }
             
+        except ValueError as e:
+            # Handle password validation errors (e.g., password too long)
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
         except Exception as e:
             db.rollback()
             raise HTTPException(
@@ -92,12 +99,19 @@ class UserService:
     
     def login_user(self, db: Session, userid: str, password: str, ip_address: str = None, user_agent: str = None) -> Dict[str, Any]:
         """Login user and create session"""
-        # Authenticate user
-        user = self.auth_service.authenticate_user(db, userid, password)
-        if not user:
+        try:
+            # Authenticate user
+            user = self.auth_service.authenticate_user(db, userid, password)
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid credentials"
+                )
+        except ValueError as e:
+            # Handle password validation errors (e.g., password too long)
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
             )
         
         # Note: Email verification is disabled for now, so we don't check is_verified
@@ -494,26 +508,33 @@ class UserService:
     
     def change_password(self, db: Session, user_id: int, current_password: str, new_password: str) -> Dict[str, Any]:
         """Change user password"""
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        # Verify current password
-        if not self.auth_service.verify_password(current_password, user.password_hash):
+        try:
+            user = db.query(User).filter(User.id == user_id).first()
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="User not found"
+                )
+            
+            # Verify current password
+            if not self.auth_service.verify_password(current_password, user.password_hash):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Current password is incorrect"
+                )
+            
+            # Update password
+            success = self.auth_service.update_user_password(db, user_id, new_password)
+            if not success:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to update password"
+                )
+        except ValueError as e:
+            # Handle password validation errors (e.g., password too long)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Current password is incorrect"
-            )
-        
-        # Update password
-        success = self.auth_service.update_user_password(db, user_id, new_password)
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to update password"
+                detail=str(e)
             )
         
         # Invalidate all sessions
