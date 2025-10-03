@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
 import { fetchShips } from '../../store/slices/shipsSlice';
@@ -16,6 +16,7 @@ import {
   FaExclamationTriangle,
   FaCheckCircle
 } from 'react-icons/fa';
+import ShipCreationModal from '../../components/Ships/ShipCreationModal';
 
 const FleetContainer = styled.div`
   max-width: 1200px;
@@ -260,31 +261,50 @@ const EmptyDescription = styled.p`
 const FleetManagement: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { ships, isLoading } = useAppSelector((state) => state.ships);
-  const [searchTerm, setSearchTerm] = React.useState('');
+  const { ships, isLoading, error } = useAppSelector((state) => state.ships);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchShips({}));
   }, [dispatch]);
 
-  const filteredShips = ships.filter(ship =>
+  const filteredShips = ships?.filter(ship =>
     ship.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     ship.ship_type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) || [];
 
   const handleShipSelect = (shipId: number) => {
     navigate(`/ships/${shipId}`);
   };
 
   const handleCreateShip = () => {
-    // TODO: Implement ship creation modal
-    console.log('Create new ship');
+    setIsCreateModalOpen(true);
   };
 
   if (isLoading) {
     return (
       <FleetContainer>
         <LoadingSpinner>Loading fleet...</LoadingSpinner>
+      </FleetContainer>
+    );
+  }
+
+  if (error) {
+    return (
+      <FleetContainer>
+        <EmptyState>
+          <EmptyIcon>
+            <FaExclamationTriangle />
+          </EmptyIcon>
+          <EmptyTitle>Error Loading Fleet</EmptyTitle>
+          <EmptyDescription>
+            {error}
+          </EmptyDescription>
+          <Button onClick={() => dispatch(fetchShips({}))}>
+            Try Again
+          </Button>
+        </EmptyState>
       </FleetContainer>
     );
   }
@@ -332,10 +352,12 @@ const FleetManagement: React.FC = () => {
             {searchTerm ? 'No ships match your search criteria.' : 'You don\'t have any ships yet.'}
           </EmptyDescription>
           {!searchTerm && (
-            <Button onClick={handleCreateShip}>
-              <FaPlus />
-              Build Your First Ship
-            </Button>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <Button onClick={handleCreateShip}>
+                <FaPlus />
+                Build Your First Ship
+              </Button>
+            </div>
           )}
         </EmptyState>
       ) : (
@@ -353,6 +375,9 @@ const FleetManagement: React.FC = () => {
                 </ShipInfo>
                 
                 <ShipActions>
+                  <ActionButton onClick={() => navigate(`/ships/${ship.id}`)} title="Enter Game">
+                    <FaPlay />
+                  </ActionButton>
                   <ActionButton onClick={() => handleShipSelect(ship.id)} title="View Details">
                     <FaEye />
                   </ActionButton>
@@ -394,6 +419,11 @@ const FleetManagement: React.FC = () => {
           ))}
         </ShipsGrid>
       )}
+
+      <ShipCreationModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </FleetContainer>
   );
 };

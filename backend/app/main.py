@@ -7,9 +7,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import os
+import socketio
+import asyncio
+import logging
 
 # Import API routers - lazy import to avoid startup issues
-from .api import users, teams, ships
+from .api import users, teams, ships, planets
+from .websocket_server import sio
+
+logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
@@ -47,6 +53,7 @@ def include_routers():
     app.include_router(users.router, prefix="/api")
     app.include_router(teams.router, prefix="/api")
     app.include_router(ships.router, prefix="/api")
+    app.include_router(planets.router, prefix="/api")
     app.include_router(communications.router)
     app.include_router(wormholes.router, prefix="/api")
     app.include_router(beacons.router, prefix="/api")
@@ -58,6 +65,49 @@ def include_routers():
 # Include routers after app creation
 include_routers()
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize game engine on startup"""
+    try:
+        logger.info("Starting Galactic Empire backend...")
+        
+        # Import game engine here to avoid circular imports
+        from .core.game_engine import game_engine
+        
+        # Initialize and start the game engine
+        logger.info("Initializing game engine...")
+        await game_engine.initialize()
+        
+        logger.info("Starting game engine...")
+        await game_engine.start_game()
+        
+        logger.info("Galactic Empire backend started successfully!")
+        
+    except Exception as e:
+        logger.error(f"Failed to start game engine: {e}")
+        # Don't fail startup completely, but log the error
+        logger.warning("Backend started without game engine - manual initialization required")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Stop game engine on shutdown"""
+    try:
+        logger.info("Shutting down Galactic Empire backend...")
+        
+        # Import game engine here to avoid circular imports
+        from .core.game_engine import game_engine
+        
+        # Stop the game engine
+        if game_engine._initialized:
+            logger.info("Stopping game engine...")
+            await game_engine.stop_game()
+            logger.info("Game engine stopped successfully")
+        
+        logger.info("Galactic Empire backend shutdown complete")
+        
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
+
 @app.get("/api/status")
 async def api_status():
     """API status endpoint"""
@@ -68,6 +118,20 @@ async def api_status():
         "description": "Space conquest game backend"
     }
 
+@app.get("/api/websocket/status")
+async def websocket_status():
+    """WebSocket server status endpoint"""
+    from .websocket_server import get_connected_users
+    connected_users = await get_connected_users()
+    return {
+        "websocket_enabled": True,
+        "connected_users": len(connected_users),
+        "users": connected_users
+    }
+
+# Create the combined ASGI app with Socket.IO
+socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(socket_app, host="0.0.0.0", port=8000)

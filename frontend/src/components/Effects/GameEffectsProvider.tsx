@@ -125,7 +125,7 @@ const warpJump = keyframes`
 
 // Global styles for enhanced visual effects
 const GlobalEffectsStyles = createGlobalStyle<{ enableEffects: boolean }>`
-  ${props => props.enableEffects && `
+  ${props => props.enableEffects ? `
     /* Enhanced button hover effects */
     button {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -189,7 +189,7 @@ const GlobalEffectsStyles = createGlobalStyle<{ enableEffects: boolean }>`
     .warp-effect {
       animation: ${warpJump} 1s ease-in-out;
     }
-  `}
+  ` : ''}
 `;
 
 // Particle effect components

@@ -52,6 +52,7 @@ class GameState:
     tick_system: TickSystem
     game_time: datetime
     running: bool = False
+    tick_number: int = 0  # Global game tick counter
 
 
 class GameEngine:
@@ -73,8 +74,8 @@ class GameEngine:
         # Create galaxy map
         galaxy_map = GalaxyMap()
         
-        # Create tick system
-        tick_system = TickSystem()
+        # Create tick system with callback to increment global game tick
+        tick_system = TickSystem(tick_callback=self.increment_tick)
         
         # Initialize game state
         self.game_state = GameState(
@@ -84,11 +85,59 @@ class GameEngine:
             game_time=datetime.utcnow()
         )
         
+        # Restore ships from database
+        await self.restore_ships_from_database()
+        
         # Start tick system
         await tick_system.start()
         
         self._initialized = True
         logger.info("Game engine initialized successfully")
+    
+    async def restore_ships_from_database(self):
+        """Restore ships from database to game engine"""
+        try:
+            from ..core.database import get_db
+            from ..models.ship import Ship as DBShip
+            from sqlalchemy.orm import Session
+            
+            # Get database session
+            db = next(get_db())
+            
+            # Get all active ships from database (status = 1 means active)
+            db_ships = db.query(DBShip).filter(DBShip.status == 1).all()
+            
+            restored_count = 0
+            for db_ship in db_ships:
+                try:
+                    # Create ship in game engine
+                    ship = Ship(
+                        ship_id=str(db_ship.id),
+                        user_id=str(db_ship.user_id),
+                        ship_name=db_ship.shipname,
+                        ship_class=db_ship.shpclass,
+                        position=Coordinate(db_ship.x_coord, db_ship.y_coord),
+                        heading=db_ship.heading,
+                        speed=db_ship.speed,
+                        max_speed=50000.0,  # Default max speed
+                        max_acceleration=2000.0,  # Default acceleration
+                        energy=db_ship.energy,
+                        shields=db_ship.shields,
+                        max_shields=db_ship.max_shields,
+                        damage=db_ship.damage,
+                        status='active' if db_ship.status == 1 else 'inactive'
+                    )
+                    
+                    self.game_state.ships[str(db_ship.id)] = ship
+                    restored_count += 1
+                    
+                except Exception as e:
+                    logger.error(f"Failed to restore ship {db_ship.id}: {e}")
+            
+            logger.info(f"Restored {restored_count} ships from database")
+            
+        except Exception as e:
+            logger.error(f"Failed to restore ships from database: {e}")
     
     async def start_game(self):
         """Start the game"""
@@ -245,6 +294,19 @@ class GameEngine:
         
         self.game_state.galaxy_map.set_beacon_message(coord, message)
     
+    def increment_tick(self):
+        """Increment the global game tick counter"""
+        if self.game_state:
+            self.game_state.tick_number += 1
+            self.game_state.game_time = datetime.utcnow()
+            logger.debug(f"Game tick incremented to {self.game_state.tick_number}")
+    
+    def get_current_tick(self) -> int:
+        """Get the current game tick number"""
+        if not self.game_state:
+            return 0
+        return self.game_state.tick_number
+    
     def get_beacon_message(self, coord: Coordinate) -> Optional[str]:
         """Get beacon message for a sector"""
         if not self.game_state:
@@ -255,7 +317,15 @@ class GameEngine:
     def get_game_statistics(self) -> Dict[str, Any]:
         """Get game statistics"""
         if not self.game_state:
-            return {}
+            # Return default values when game engine is not initialized
+            return {
+                'total_ships': 0,
+                'active_ships': 0,
+                'game_running': False,
+                'game_time': datetime.utcnow().isoformat(),
+                'galaxy': {},
+                'tick_system': {}
+            }
         
         active_ships = sum(1 for ship in self.game_state.ships.values() 
                           if ship.status == 'active')
@@ -268,6 +338,7 @@ class GameEngine:
             'active_ships': active_ships,
             'game_running': self.game_state.running,
             'game_time': self.game_state.game_time.isoformat(),
+            'tick_number': self.game_state.tick_number,
             'galaxy': galaxy_stats,
             'tick_system': tick_stats
         }

@@ -12,6 +12,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import your models
 from app.models.base import Base
+from app.models.associations import user_roles, role_permissions, planet_items
+from app.models.role import Role, Permission, UserPermission, APIKey
 from app.models.user import User, UserAccount, UserToken, UserSession
 from app.models.ship import Ship, ShipClass, ShipType
 from app.models.planet import Planet, Sector, PlanetItem
@@ -21,6 +23,10 @@ from app.models.item import Item, ItemType
 from app.models.mine import Mine
 from app.models.beacon import Beacon
 from app.models.wormhole import Wormhole, WormholeTable
+from app.models.config import (
+    GameConfig, ConfigHistory, ConfigVersion, BalanceAdjustment,
+    PlayerScore, PlayerAchievement, TeamScore, GameStatistics, BalanceReport
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

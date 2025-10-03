@@ -6,6 +6,7 @@ services:
       - CORS_ORIGINS=http://localhost:13000,http://localhost:13001,http://192.168.1.250:13000
 
   frontend:
-    environment:
-      - REACT_APP_API_URL=http://192.168.1.250:18000
-      - REACT_APP_WS_URL=ws://192.168.1.250:18000
+    build:
+      args:
+        - REACT_APP_API_URL=http://192.168.1.250:18000
+        - REACT_APP_WS_URL=http://192.168.1.250:18000

@@ -32,7 +32,7 @@ export const getGameState = createAsyncThunk<GameState, void>(
   async (_, { rejectWithValue }) => {
     try {
       const response = await gameApi.getGameState();
-      return response.data.data;
+      return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to get game state');
     }

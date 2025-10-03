@@ -175,7 +175,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar, sidebarCollapsed }) =>
 
         <UserInfo>
           <FaUser size={12} />
-          {user?.username || 'Guest'}
+          {user?.userid || 'Guest'}
         </UserInfo>
       </RightSection>
     </HeaderContainer>

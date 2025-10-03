@@ -39,8 +39,9 @@ class Team(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
-    leader = relationship("User")
-    members = relationship("User", back_populates="team")
+    leader = relationship("User", foreign_keys=[leader_id], back_populates="led_teams")
+    members = relationship("User", foreign_keys="User.team_id", back_populates="team")
+    scores = relationship("TeamScore", back_populates="team")
     
     def __repr__(self):
         return f"<Team(teamname='{self.teamname}', teamcode={self.teamcode}, members={self.teamcount})>"

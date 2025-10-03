@@ -6,16 +6,20 @@ profile management, preferences, and statistics.
 """
 
 from typing import Dict, List, Optional, Any
+import logging
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from datetime import datetime
 
 from ..models.user import User, UserAccount, UserSession
-from ..models.ship import Ship
+from ..models.ship import Ship, ShipClass
 from ..models.team import Team
 from ..models.planet import Planet
 from ..core.auth import auth_service
 from ..core.game_engine import game_engine
+
+# Module logger
+logger = logging.getLogger(__name__)
 
 
 class UserService:
@@ -45,6 +49,19 @@ class UserService:
             )
             db.add(user_account)
             db.commit()
+            
+            # Create starter ship for new user (ship class 1 - Interceptor)
+            try:
+                starter_ship = self.create_ship(
+                    db=db,
+                    user_id=user.id,
+                    ship_name=f"{userid}'s First Ship",
+                    ship_class=1  # Interceptor class
+                )
+            except Exception as ship_error:
+                # Log the error but don't fail registration
+                logger.warning(f"Failed to create starter ship for user {userid}: {ship_error}")
+                # Continue with registration even if ship creation fails
             
             return {
                 "user": {
@@ -101,6 +118,9 @@ class UserService:
             data={"sub": str(user.id), "userid": user.userid}
         )
         
+        # Ensure user has at least one ship
+        self.ensure_user_has_ship(db, user.id)
+        
         # Update last login
         user.last_login = datetime.utcnow()
         db.commit()
@@ -136,8 +156,8 @@ class UserService:
         # Get user account
         user_account = db.query(UserAccount).filter(UserAccount.user_id == user_id).first()
         
-        # Get user's ships
-        ships = db.query(Ship).filter(Ship.user_id == user_id).all()
+        # Get user's ships with ship class information
+        ships = db.query(Ship).join(ShipClass).filter(Ship.user_id == user_id).all()
         
         # Get team information
         team = None
@@ -156,10 +176,11 @@ class UserService:
             "ships": [
                 {
                     "id": ship.id,
-                    "ship_name": ship.ship_name,
-                    "ship_class": ship.ship_class,
+                    "ship_name": ship.shipname,
+                    "ship_class": ship.ship_class_id,
+                    "ship_class_name": ship.ship_class.name if ship.ship_class else "Unknown",
                     "status": ship.status,
-                    "position": {"x": ship.position_x, "y": ship.position_y},
+                    "position": {"x": ship.x_coord, "y": ship.y_coord},
                     "heading": ship.heading,
                     "speed": ship.speed
                 }
@@ -238,20 +259,65 @@ class UserService:
                 detail=f"Maximum number of ships ({max_ships}) reached"
             )
         
-        # Create ship in database
+        # Resolve ship class id and display class number
+        ship_class_row = db.query(ShipClass).filter(ShipClass.id == ship_class).first()
+        if not ship_class_row:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid ship class"
+            )
+        
+        # Generate next ship number for user
+        next_shipno = (user.topshipno or 0) + 1
+        
+        # Create ship in database (align with ORM fields)
         ship = Ship(
             user_id=user_id,
-            ship_name=ship_name,
-            ship_class=ship_class,
-            position_x=0.0,  # Start in neutral sector
-            position_y=0.0,
+            shipno=next_shipno,
+            shipname=ship_name,
+            ship_class_id=ship_class_row.id,
+            shpclass=ship_class_row.class_number,
             heading=0.0,
+            head2b=0.0,
             speed=0.0,
-            energy=50000,
-            shields=0,
-            max_shields=100,
+            speed2b=0.0,
+            x_coord=0.0,  # Start in neutral sector
+            y_coord=0.0,
             damage=0.0,
-            status="active"
+            energy=50000.0,
+            phaser_strength=0.0,
+            phaser_type=0,
+            kills=0,
+            last_fired=0,
+            shield_type=0,
+            shield_status=0,
+            shield_charge=0,
+            cloak=0,
+            tactical=0,
+            helm=0,
+            train=0,
+            where=0,
+            jammer=0,
+            freq_subspace=0,
+            freq_hyperspace=0,
+            freq_planetary=0,
+            hostile=False,
+            cant_exit=0,
+            repair=False,
+            hypha=False,
+            fire_control=False,
+            destruct=0,
+            status=0,  # 0 = active/normal
+            cyb_mine=False,
+            cyb_skill=0,
+            cyb_update=0,
+            tick=0,
+            emulate=False,
+            mines_near=False,
+            lock=0,
+            hold_course=0,
+            top_speed=0,
+            warn_counter=0
         )
         
         db.add(ship)
@@ -283,16 +349,35 @@ class UserService:
             "message": "Ship created successfully",
             "ship": {
                 "id": ship.id,
-                "ship_name": ship.ship_name,
-                "ship_class": ship.ship_class,
-                "status": ship.status,
-                "position": {"x": ship.position_x, "y": ship.position_y},
-                "heading": ship.heading,
-                "speed": ship.speed,
-                "energy": ship.energy,
-                "shields": ship.shields
+                "ship_name": ship.shipname,
+                "ship_class": ship.shpclass,
+                "status": ship.status
             }
         }
+    
+    def ensure_user_has_ship(self, db: Session, user_id: int) -> Optional[Dict[str, Any]]:
+        """Ensure user has at least one ship, create one if missing"""
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return None
+        
+        # Check if user has any ships
+        existing_ships = db.query(Ship).filter(Ship.user_id == user_id).count()
+        
+        if existing_ships == 0:
+            # Create a starter ship
+            try:
+                return self.create_ship(
+                    db=db,
+                    user_id=user_id,
+                    ship_name=f"{user.userid}'s Ship",
+                    ship_class=1  # Interceptor class
+                )
+            except Exception as e:
+                logger.error(f"Failed to create starter ship for user {user_id}: {e}")
+                return None
+        
+        return None
     
     def get_user_ships(self, db: Session, user_id: int) -> List[Dict[str, Any]]:
         """Get all ships for a user"""
@@ -301,17 +386,26 @@ class UserService:
         return [
             {
                 "id": ship.id,
-                "ship_name": ship.ship_name,
-                "ship_class": ship.ship_class,
-                "status": ship.status,
-                "position": {"x": ship.position_x, "y": ship.position_y},
-                "heading": ship.heading,
-                "speed": ship.speed,
-                "energy": ship.energy,
-                "shields": ship.shields,
-                "max_shields": ship.max_shields,
-                "damage": ship.damage,
-                "created_at": ship.created_at.isoformat()
+                "name": ship.shipname,
+                "owner_id": ship.user_id,
+                "ship_type": "Interceptor",  # Default ship type
+                "ship_class": ship.shpclass,
+                "x": ship.x_coord,
+                "y": ship.y_coord,
+                "z": 0.0,  # Default z coordinate
+                "sector": 1,  # Default sector
+                "hull_points": 100 - ship.damage,  # Calculate hull points from damage
+                "max_hull_points": 100,
+                "shields": ship.shield_charge,
+                "max_shields": 100,
+                "fuel": ship.energy,  # Use energy as fuel
+                "max_fuel": 50000,
+                "cargo_capacity": 1000,  # Default cargo capacity
+                "cargo_used": 0,  # Default empty cargo
+                "weapons": ["Phaser"],  # Default weapon
+                "is_active": (ship.status or 0) == 0,
+                "created_at": ship.created_at.isoformat() if ship.created_at else "2025-01-01T00:00:00Z",
+                "last_updated": ship.updated_at.isoformat() if ship.updated_at else "2025-01-01T00:00:00Z"
             }
             for ship in ships
         ]
@@ -341,10 +435,10 @@ class UserService:
             "message": "Ship selected successfully",
             "ship": {
                 "id": ship.id,
-                "ship_name": ship.ship_name,
+                "ship_name": ship.shipname,
                 "ship_class": ship.ship_class,
                 "status": ship.status,
-                "position": {"x": ship.position_x, "y": ship.position_y},
+                "position": {"x": ship.x_coord, "y": ship.y_coord},
                 "heading": ship.heading,
                 "speed": ship.speed,
                 "energy": ship.energy,
@@ -360,6 +454,9 @@ class UserService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
             )
+        
+        # Ensure user has at least one ship
+        self.ensure_user_has_ship(db, user.id)
         
         # Get ship statistics
         ships = db.query(Ship).filter(Ship.user_id == user_id).all()

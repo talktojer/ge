@@ -6,6 +6,7 @@ from sqlalchemy import Column, Integer, String, BigInteger, Float, Boolean, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .base import Base
+from .associations import planet_items
 
 
 class ItemType(Base):
@@ -39,7 +40,6 @@ class ItemType(Base):
     
     # Relationships
     items = relationship("Item", back_populates="item_type")
-    planets = relationship("Planet", secondary="planet_items", back_populates="items")
     
     def __repr__(self):
         return f"<ItemType(name='{self.name}', keyword='{self.keyword}')>"
@@ -74,7 +74,7 @@ class Item(Base):
     # Relationships
     item_type = relationship("ItemType", back_populates="items")
     owner = relationship("User")
-    planets = relationship("Planet", secondary="planet_items", back_populates="items")
+    planets = relationship("Planet", secondary=planet_items, back_populates="items")
     
     def __repr__(self):
         return f"<Item(item_type_id={self.item_type_id}, quantity={self.quantity}, location={self.location_type})>"

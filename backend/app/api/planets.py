@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from ..core.database import get_db
 from ..core.auth import get_current_user
 from ..core.planetary_service import PlanetaryService
+from ..models.planet import Planet
 from ..models.user import User
 
 router = APIRouter()
@@ -43,6 +44,42 @@ class TradingRequest(BaseModel):
 
 
 # Planet Information Endpoints
+
+@router.get("/planets", response_model=List[Dict[str, Any]])
+async def get_planets(
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(50, ge=1, le=100, description="Items per page"),
+    db: Session = Depends(get_db)
+):
+    """Get all planets with pagination"""
+    try:
+        offset = (page - 1) * per_page
+        planets = db.query(Planet).offset(offset).limit(per_page).all()
+        
+        results = []
+        for planet in planets:
+            results.append({
+                "id": planet.id,
+                "name": planet.name,
+                "sector": (planet.xsect, planet.ysect),
+                "position": (planet.x_coord, planet.y_coord),
+                "environment": planet.environment,
+                "resource": planet.resource,
+                "owner_id": planet.owner_id,
+                "cash": planet.cash,
+                "debt": planet.debt,
+                "population": planet.population,
+                "tax_rate": planet.tax_rate,
+                "beacon_text": planet.beacon_text
+            })
+        
+        return results
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving planets: {str(e)}"
+        )
+
 
 @router.get("/planets/{planet_id}/status", response_model=Dict[str, Any])
 async def get_planet_status(

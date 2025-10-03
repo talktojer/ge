@@ -7,12 +7,13 @@ import {
   Ship, 
   Planet, 
   PaginatedResponse,
-  ShipCommand 
+  ShipCommand,
+  ShipCreateRequest 
 } from '../types';
 
 // Create axios instance with base configuration
 const api: AxiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:18000',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -59,59 +60,65 @@ export const authApi = {
 
 // Game API
 export const gameApi = {
-  getGameState: (): Promise<AxiosResponse<ApiResponse<any>>> =>
-    api.get('/game/state'),
+  getGameState: (): Promise<AxiosResponse<any>> =>
+    api.get('/api/users/game-state'),
   
   getShip: (shipId: number): Promise<AxiosResponse<ApiResponse<Ship>>> =>
-    api.get(`/ships/${shipId}`),
+    api.get(`/api/ships/${shipId}`),
   
   getPlanet: (planetId: number): Promise<AxiosResponse<ApiResponse<Planet>>> =>
-    api.get(`/planets/${planetId}`),
+    api.get(`/api/planets/${planetId}`),
 };
 
 // Ships API
 export const shipsApi = {
   getShips: (params?: { page?: number; per_page?: number }): Promise<AxiosResponse<PaginatedResponse<Ship>>> =>
-    api.get('/ships', { params }),
+    api.get('/api/users/ships', { params }),
   
-  getShip: (shipId: number): Promise<AxiosResponse<ApiResponse<Ship>>> =>
-    api.get(`/ships/${shipId}`),
+  getShip: (shipId: number): Promise<AxiosResponse<Ship>> =>
+    api.get(`/api/users/ships/${shipId}`),
   
-  createShip: (shipData: Partial<Ship>): Promise<AxiosResponse<ApiResponse<Ship>>> =>
-    api.post('/ships', shipData),
+  createShip: (shipData: ShipCreateRequest): Promise<AxiosResponse<ApiResponse<Ship>>> =>
+    api.post('/api/users/ships', shipData),
   
   updateShip: (shipId: number, shipData: Partial<Ship>): Promise<AxiosResponse<ApiResponse<Ship>>> =>
-    api.put(`/ships/${shipId}`, shipData),
+    api.put(`/api/users/ships/${shipId}`, shipData),
   
   deleteShip: (shipId: number): Promise<AxiosResponse<ApiResponse<void>>> =>
-    api.delete(`/ships/${shipId}`),
+    api.delete(`/api/users/ships/${shipId}`),
   
   executeCommand: (command: ShipCommand): Promise<AxiosResponse<ApiResponse<any>>> =>
-    api.post('/ships/command', command),
+    api.post('/api/ships/command', command),
   
   moveShip: (shipId: number, x: number, y: number, z: number): Promise<AxiosResponse<ApiResponse<Ship>>> =>
-    api.post(`/ships/${shipId}/move`, { x, y, z }),
+    api.post(`/api/users/ships/${shipId}/move`, { x, y, z }),
+  
+  repairShip: (shipId: number): Promise<AxiosResponse<ApiResponse<any>>> =>
+    api.post(`/api/users/ships/${shipId}/repair`),
   
   attackTarget: (shipId: number, targetId: number, targetType: string): Promise<AxiosResponse<ApiResponse<any>>> =>
-    api.post(`/ships/${shipId}/attack`, { target_id: targetId, target_type: targetType }),
+    api.post(`/api/ships/${shipId}/attack`, { target_id: targetId, target_type: targetType }),
 };
 
 // Planets API
 export const planetsApi = {
   getPlanets: (params?: { page?: number; per_page?: number }): Promise<AxiosResponse<PaginatedResponse<Planet>>> =>
-    api.get('/planets', { params }),
+    api.get('/api/planets', { params }),
+  
+  getOwnedPlanets: (params?: { page?: number; per_page?: number }): Promise<AxiosResponse<PaginatedResponse<Planet>>> =>
+    api.get('/api/planets/owned', { params }),
   
   getPlanet: (planetId: number): Promise<AxiosResponse<ApiResponse<Planet>>> =>
-    api.get(`/planets/${planetId}`),
+    api.get(`/api/planets/${planetId}`),
   
   colonizePlanet: (planetId: number): Promise<AxiosResponse<ApiResponse<Planet>>> =>
-    api.post(`/planets/${planetId}/colonize`),
+    api.post(`/api/planets/${planetId}/colonize`),
   
   updatePlanet: (planetId: number, planetData: Partial<Planet>): Promise<AxiosResponse<ApiResponse<Planet>>> =>
-    api.put(`/planets/${planetId}`, planetData),
+    api.put(`/api/planets/${planetId}`, planetData),
   
   scanPlanet: (planetId: number): Promise<AxiosResponse<ApiResponse<any>>> =>
-    api.post(`/planets/${planetId}/scan`),
+    api.post(`/api/planets/${planetId}/scan`),
 };
 
 // Teams API

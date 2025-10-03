@@ -2,24 +2,11 @@
 Planet and sector models based on GALPLNT and GALSECT structures
 """
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, BigInteger, ForeignKey, Text, DateTime, Table
+from sqlalchemy import Column, Integer, String, Float, Boolean, BigInteger, ForeignKey, Text, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .base import Base
-
-# Association table for planet items
-planet_items = Table(
-    'planet_items',
-    Base.metadata,
-    Column('planet_id', Integer, ForeignKey('planets.id'), primary_key=True),
-    Column('item_id', Integer, ForeignKey('items.id'), primary_key=True),
-    Column('quantity', BigInteger, default=0),
-    Column('rate', Integer, default=0),  # rate of manufacture
-    Column('sell_to_allies', Boolean, default=False),
-    Column('reserve', Integer, default=0),
-    Column('markup_to_allies', Integer, default=0),
-    Column('sold_to_allies', BigInteger, default=0),
-)
+from .associations import planet_items
 
 
 class Sector(Base):

@@ -23,13 +23,13 @@ class ShipTypeService:
     def get_ship_type_by_name(self, type_name: str) -> Optional[ShipType]:
         """Get ship type by name (USER, CYBORG, DROID)"""
         return self.db.execute(
-            select(ShipType).where(ShipType.type_name == type_name)
+            select(ShipType).where(ShipType.typename == type_name)
         ).scalar_one_or_none()
     
     def create_ship_type(self, type_name: str, description: str = None) -> ShipType:
         """Create a new ship type"""
         ship_type = ShipType(
-            type_name=type_name,
+            typename=type_name,
             description=description
         )
         self.db.add(ship_type)

@@ -213,7 +213,7 @@ async def update_configuration(
         success = game_config.set_config(
             key=key,
             value=request.value,
-            admin_user=admin_user.username
+            admin_user=admin_user.userid
         )
         
         if not success:
@@ -226,7 +226,7 @@ async def update_configuration(
                 config_id=config_record.id,
                 old_value=config_record.value,
                 new_value=request.value,
-                changed_by=admin_user.username,
+                changed_by=admin_user.userid,
                 change_reason=request.reason
             )
             db.add(history_record)
@@ -256,7 +256,7 @@ async def update_configurations_batch(
                 success = game_config.set_config(
                     key=update.key,
                     value=update.value,
-                    admin_user=admin_user.username
+                    admin_user=admin_user.userid
                 )
                 
                 if success:
@@ -324,7 +324,7 @@ async def export_configurations(
         config_data = game_config.export_config()
         return {
             "exported_at": datetime.utcnow().isoformat(),
-            "exported_by": admin_user.username,
+            "exported_by": admin_user.userid,
             "configurations": config_data
         }
     except Exception as e:
@@ -339,12 +339,12 @@ async def import_configurations(
 ):
     """Import configurations from JSON"""
     try:
-        errors = game_config.import_config(config_data, admin_user.username)
+        errors = game_config.import_config(config_data, admin_user.userid)
         
         return {
             "message": "Configuration import completed",
             "errors": errors,
-            "imported_by": admin_user.username
+            "imported_by": admin_user.userid
         }
     except Exception as e:
         logger.error(f"Error importing configurations: {e}")
@@ -367,7 +367,7 @@ async def create_config_version(
             version_name=request.version_name,
             description=request.description,
             config_snapshot=config_snapshot,
-            created_by=admin_user.username
+            created_by=admin_user.userid
         )
         
         db.add(version)

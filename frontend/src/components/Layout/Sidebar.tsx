@@ -288,7 +288,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </UserAvatar>
           {!collapsed && (
             <UserInfo collapsed={collapsed}>
-              <UserName>{user?.username || 'Guest'}</UserName>
+              <UserName>{user?.userid || 'Guest'}</UserName>
               <UserRole>Commander</UserRole>
             </UserInfo>
           )}

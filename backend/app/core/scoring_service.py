@@ -1,22 +1,21 @@
 """
-Galactic Empire - Comprehensive Scoring and Ranking System
+Galactic Empire - Scoring Service
 
-This module provides advanced scoring calculations, ranking systems, and
-achievement tracking for competitive gameplay.
+This module implements the original scoring system with kill/planet/team scoring
+formulas from the classic BBS game.
 """
 
 from typing import Dict, Any, Optional, List, Tuple
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 import logging
 import math
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc, asc
 from app.core.database import get_db
-from app.core.game_config import game_config, ConfigCategory
+from app.core.game_config import game_config
 from app.models.user import User
-from app.models.ship import Ship
+from app.models.ship import Ship, ShipClass
 from app.models.planet import Planet
 from app.models.team import Team
 
@@ -24,680 +23,396 @@ logger = logging.getLogger(__name__)
 
 
 class ScoreType(Enum):
-    """Types of scores tracked"""
+    """Types of scores"""
     KILL_SCORE = "kill_score"
     PLANET_SCORE = "planet_score"
     TEAM_SCORE = "team_score"
-    NET_WORTH = "net_worth"
-    COMBAT_RATING = "combat_rating"
-    ECONOMIC_RATING = "economic_rating"
-    STRATEGIC_RATING = "strategic_rating"
-    OVERALL_RATING = "overall_rating"
-
-
-class AchievementType(Enum):
-    """Types of achievements"""
-    COMBAT = "combat"
-    ECONOMIC = "economic"
-    STRATEGIC = "strategic"
-    TEAMWORK = "teamwork"
-    EXPLORATION = "exploration"
-    SPECIAL = "special"
+    TOTAL_SCORE = "total_score"
 
 
 @dataclass
-class ScoreBreakdown:
-    """Detailed breakdown of player scores"""
-    kill_score: int = 0
-    planet_score: int = 0
-    team_score: int = 0
-    net_worth: int = 0
-    combat_rating: float = 0.0
-    economic_rating: float = 0.0
-    strategic_rating: float = 0.0
-    overall_rating: float = 0.0
-    
-    def get_total_score(self) -> int:
-        """Calculate total score"""
-        return self.kill_score + self.planet_score + self.team_score + self.net_worth
+class ShipClassPoints:
+    """Ship class point values from original game"""
+    ship_class: str
+    points: int
+    description: str
 
 
 @dataclass
-class PlayerRanking:
-    """Player ranking information"""
+class PlayerScore:
+    """Player score breakdown"""
     user_id: int
     username: str
+    kill_score: int
+    planet_score: int
+    team_score: int
+    total_score: int
     rank: int
-    score: int
-    score_breakdown: ScoreBreakdown
-    team_name: Optional[str] = None
-    last_active: Optional[datetime] = None
-    achievements: List[str] = field(default_factory=list)
+    last_updated: datetime
 
 
 @dataclass
-class TeamRanking:
-    """Team ranking information"""
+class TeamScore:
+    """Team score breakdown"""
     team_id: int
     team_name: str
-    rank: int
     total_score: int
     member_count: int
     average_score: float
-    coordination_bonus: float
-    last_active: Optional[datetime] = None
-
-
-@dataclass
-class Achievement:
-    """Achievement definition"""
-    id: str
-    name: str
-    description: str
-    achievement_type: AchievementType
-    requirement: Dict[str, Any]
-    reward_score: int
-    icon: str = ""
-    rarity: str = "common"  # common, rare, epic, legendary
+    rank: int
+    last_updated: datetime
 
 
 class ScoringService:
-    """Service for calculating scores, rankings, and achievements"""
+    """Service for managing game scoring calculations"""
     
     def __init__(self):
-        self._achievements: Dict[str, Achievement] = {}
-        self._score_cache: Dict[int, ScoreBreakdown] = {}
-        self._ranking_cache: Dict[str, List[Any]] = {}
-        self._cache_timestamp: Optional[datetime] = None
-        self._initialize_achievements()
-    
-    def _initialize_achievements(self):
-        """Initialize all available achievements"""
-        achievements = [
-            # Combat Achievements
-            Achievement(
-                id="first_kill",
-                name="First Blood",
-                description="Score your first kill",
-                achievement_type=AchievementType.COMBAT,
-                requirement={"kills": 1},
-                reward_score=100,
-                icon="⚔️",
-                rarity="common"
-            ),
-            Achievement(
-                id="ace_pilot",
-                name="Ace Pilot",
-                description="Achieve 10 kills",
-                achievement_type=AchievementType.COMBAT,
-                requirement={"kills": 10},
-                reward_score=500,
-                icon="🏆",
-                rarity="rare"
-            ),
-            Achievement(
-                id="destroyer",
-                name="Destroyer",
-                description="Achieve 50 kills",
-                achievement_type=AchievementType.COMBAT,
-                requirement={"kills": 50},
-                reward_score=2000,
-                icon="💀",
-                rarity="epic"
-            ),
-            Achievement(
-                id="legendary_warrior",
-                name="Legendary Warrior",
-                description="Achieve 100 kills",
-                achievement_type=AchievementType.COMBAT,
-                requirement={"kills": 100},
-                reward_score=5000,
-                icon="👑",
-                rarity="legendary"
-            ),
-            
-            # Economic Achievements
-            Achievement(
-                id="merchant",
-                name="Merchant",
-                description="Accumulate 1M credits",
-                achievement_type=AchievementType.ECONOMIC,
-                requirement={"credits": 1000000},
-                reward_score=200,
-                icon="💰",
-                rarity="common"
-            ),
-            Achievement(
-                id="tycoon",
-                name="Tycoon",
-                description="Accumulate 10M credits",
-                achievement_type=AchievementType.ECONOMIC,
-                requirement={"credits": 10000000},
-                reward_score=1000,
-                icon="💎",
-                rarity="rare"
-            ),
-            Achievement(
-                id="empire_builder",
-                name="Empire Builder",
-                description="Control 5 planets",
-                achievement_type=AchievementType.ECONOMIC,
-                requirement={"planets_controlled": 5},
-                reward_score=1500,
-                icon="🏰",
-                rarity="epic"
-            ),
-            
-            # Strategic Achievements
-            Achievement(
-                id="explorer",
-                name="Explorer",
-                description="Visit 20 different sectors",
-                achievement_type=AchievementType.STRATEGIC,
-                requirement={"sectors_visited": 20},
-                reward_score=300,
-                icon="🗺️",
-                rarity="rare"
-            ),
-            Achievement(
-                id="diplomat",
-                name="Diplomat",
-                description="Send 100 diplomatic messages",
-                achievement_type=AchievementType.STRATEGIC,
-                requirement={"diplomatic_messages": 100},
-                reward_score=400,
-                icon="🤝",
-                rarity="rare"
-            ),
-            
-            # Teamwork Achievements
-            Achievement(
-                id="team_player",
-                name="Team Player",
-                description="Join a team",
-                achievement_type=AchievementType.TEAMWORK,
-                requirement={"team_member": True},
-                reward_score=100,
-                icon="👥",
-                rarity="common"
-            ),
-            Achievement(
-                id="coordinator",
-                name="Coordinator",
-                description="Lead team to victory",
-                achievement_type=AchievementType.TEAMWORK,
-                requirement={"team_victories": 1},
-                reward_score=800,
-                icon="🎯",
-                rarity="epic"
-            ),
-            
-            # Special Achievements
-            Achievement(
-                id="survivor",
-                name="Survivor",
-                description="Survive 10 battles",
-                achievement_type=AchievementType.SPECIAL,
-                requirement={"battles_survived": 10},
-                reward_score=300,
-                icon="🛡️",
-                rarity="rare"
-            ),
-            Achievement(
-                id="perfectionist",
-                name="Perfectionist",
-                description="Win 10 battles without taking damage",
-                achievement_type=AchievementType.SPECIAL,
-                requirement={"perfect_victories": 10},
-                reward_score=1500,
-                icon="✨",
-                rarity="legendary"
-            ),
-        ]
-        
-        for achievement in achievements:
-            self._achievements[achievement.id] = achievement
-    
-    def calculate_kill_score(self, kills: List[Dict[str, Any]]) -> int:
-        """Calculate kill score based on ship classes destroyed"""
-        base_score = game_config.get_config("kill_score_base")
-        ship_multipliers = game_config.get_config("ship_class_multipliers")
-        
-        total_score = 0
-        for kill in kills:
-            ship_class = kill.get("ship_class", "Fighter")
-            multiplier = ship_multipliers.get(ship_class, 1.0)
-            
-            # Additional bonuses
-            bonus = 1.0
-            if kill.get("critical_hit", False):
-                bonus += 0.5  # 50% bonus for critical hits
-            if kill.get("outnumbered", False):
-                bonus += 0.3  # 30% bonus for outnumbered victories
-            if kill.get("first_strike", False):
-                bonus += 0.2  # 20% bonus for first strike
-            
-            kill_score = int(base_score * multiplier * bonus)
-            total_score += kill_score
-        
-        return total_score
-    
-    def calculate_planet_score(self, planets: List[Dict[str, Any]]) -> int:
-        """Calculate planet score based on planet value"""
-        population_value = game_config.get_config("planet_population_value")
-        production_value = game_config.get_config("planet_production_value")
-        strategic_bonus = game_config.get_config("planet_strategic_bonus")
-        
-        total_score = 0
-        for planet in planets:
-            # Base planet score
-            population_score = planet.get("population", 0) * population_value
-            production_score = planet.get("total_production", 0) * production_value
-            
-            # Strategic bonus
-            strategic_value = 1.0
-            if planet.get("strategic_location", False):
-                strategic_value += strategic_bonus
-            if planet.get("high_resources", False):
-                strategic_value += strategic_bonus * 0.5
-            
-            planet_score = int((population_score + production_score) * strategic_value)
-            total_score += planet_score
-        
-        return total_score
-    
-    def calculate_team_score(self, team_stats: Dict[str, Any]) -> int:
-        """Calculate team score based on team performance"""
-        base_bonus = game_config.get_config("team_bonus_base")
-        coordination_bonus = game_config.get_config("team_coordination_bonus")
-        
-        # Base team score
-        team_score = base_bonus
-        
-        # Member count bonus
-        member_count = team_stats.get("member_count", 1)
-        if member_count >= 5:
-            team_score += int(base_bonus * 0.5)  # 50% bonus for large teams
-        
-        # Coordination bonus
-        coordinated_actions = team_stats.get("coordinated_actions", 0)
-        if coordinated_actions > 10:
-            team_score += int(base_bonus * coordination_bonus)
-        
-        # Victory bonus
-        victories = team_stats.get("victories", 0)
-        team_score += victories * 500
-        
-        return team_score
-    
-    def calculate_net_worth(self, assets: Dict[str, Any]) -> int:
-        """Calculate net worth from all assets"""
-        net_worth = 0
-        
-        # Ship values
-        ships = assets.get("ships", [])
-        for ship in ships:
-            ship_value = self._calculate_ship_value(ship)
-            net_worth += ship_value
-        
-        # Planet values
-        planets = assets.get("planets", [])
-        for planet in planets:
-            planet_value = self._calculate_planet_value(planet)
-            net_worth += planet_value
-        
-        # Credits
-        net_worth += assets.get("credits", 0)
-        
-        # Items and resources
-        items = assets.get("items", {})
-        for item_type, quantity in items.items():
-            item_value = self._calculate_item_value(item_type, quantity)
-            net_worth += item_value
-        
-        return net_worth
-    
-    def _calculate_ship_value(self, ship: Dict[str, Any]) -> int:
-        """Calculate ship value based on class and condition"""
-        ship_class = ship.get("ship_class", "Fighter")
-        condition = ship.get("condition", 1.0)
-        
-        # Base ship values
-        ship_values = {
-            "Interceptor": 100000,
-            "Scout": 80000,
-            "Fighter": 150000,
-            "Destroyer": 300000,
-            "Cruiser": 500000,
-            "Battleship": 800000,
-            "Dreadnought": 1200000,
-            "Flagship": 2000000,
-            "Cyborg": 400000,
-            "Droid": 200000
+        # Original ship class point values from GEREADME.DOC
+        self.ship_class_points = {
+            "Interceptor": 10,
+            "Light Freighter": 25,
+            "Heavy Freighter": 75,
+            "Destroyer": 150,
+            "Star Cruiser": 200,
+            "Battle Cruiser": 250,
+            "Frigate": 300,
+            "Dreadnought": 500,
+            "Freight Barge": 200,
+            "Cybertron Scout": 75,
+            "Cybertron Battle Cruiser": 200,
+            "Flagship": 1000,  # Estimated based on progression
+            "Scout": 15,       # Estimated
+            "Fighter": 50,     # Estimated
+            "Battleship": 400, # Estimated
+            "Cyborg": 300,     # Estimated
+            "Droid": 100       # Estimated
         }
         
-        base_value = ship_values.get(ship_class, 150000)
-        return int(base_value * condition)
+        # Original team scoring formula: (A/B)+(C*B)
+        # Where A = sum of individual scores, B = number of team members, C = team bonus
+        self.team_bonus_base = 1000
+        self.team_coordination_multiplier = 0.5
     
-    def _calculate_planet_value(self, planet: Dict[str, Any]) -> int:
-        """Calculate planet value based on resources and development"""
-        population = planet.get("population", 0)
-        resources = planet.get("total_resources", 0)
-        development = planet.get("development_level", 1.0)
-        
-        # Base value calculation
-        base_value = population * 1000 + resources * 100
-        return int(base_value * development)
-    
-    def _calculate_item_value(self, item_type: str, quantity: int) -> int:
-        """Calculate item value based on type and quantity"""
-        # Base item values (per unit)
-        item_values = {
-            "energy": 10,
-            "fuel": 25,
-            "weapons": 100,
-            "shields": 150,
-            "cargo": 50,
-            "technology": 200,
-            "food": 15,
-            "medicine": 75,
-            "luxury": 300,
-            "military": 250,
-            "construction": 40,
-            "research": 500,
-            "communication": 120,
-            "transport": 80
-        }
-        
-        unit_value = item_values.get(item_type, 50)
-        return quantity * unit_value
-    
-    def calculate_ratings(self, player_stats: Dict[str, Any]) -> Tuple[float, float, float, float]:
-        """Calculate combat, economic, strategic, and overall ratings"""
-        # Combat rating
-        combat_rating = self._calculate_combat_rating(player_stats)
-        
-        # Economic rating
-        economic_rating = self._calculate_economic_rating(player_stats)
-        
-        # Strategic rating
-        strategic_rating = self._calculate_strategic_rating(player_stats)
-        
-        # Overall rating (weighted average)
-        overall_rating = (
-            combat_rating * 0.4 +
-            economic_rating * 0.3 +
-            strategic_rating * 0.3
-        )
-        
-        return combat_rating, economic_rating, strategic_rating, overall_rating
-    
-    def _calculate_combat_rating(self, player_stats: Dict[str, Any]) -> float:
-        """Calculate combat rating based on performance"""
-        kills = player_stats.get("kills", 0)
-        deaths = player_stats.get("deaths", 1)  # Avoid division by zero
-        battles = player_stats.get("battles", 0)
-        damage_dealt = player_stats.get("damage_dealt", 0)
-        damage_taken = player_stats.get("damage_taken", 1)
-        
-        # Kill/death ratio
-        kd_ratio = kills / deaths
-        
-        # Battle participation
-        participation_rate = battles / max(player_stats.get("days_active", 1), 1)
-        
-        # Damage efficiency
-        damage_ratio = damage_dealt / damage_taken
-        
-        # Calculate rating (0-10 scale)
-        rating = (kd_ratio * 0.4 + participation_rate * 0.3 + damage_ratio * 0.3) * 2
-        return min(rating, 10.0)
-    
-    def _calculate_economic_rating(self, player_stats: Dict[str, Any]) -> float:
-        """Calculate economic rating based on wealth and production"""
-        net_worth = player_stats.get("net_worth", 0)
-        planets_controlled = player_stats.get("planets_controlled", 0)
-        trade_volume = player_stats.get("trade_volume", 0)
-        production_output = player_stats.get("production_output", 0)
-        
-        # Wealth factor
-        wealth_factor = min(net_worth / 10000000, 1.0)  # Normalize to 10M
-        
-        # Production factor
-        production_factor = min(production_output / 1000000, 1.0)  # Normalize to 1M
-        
-        # Trade factor
-        trade_factor = min(trade_volume / 5000000, 1.0)  # Normalize to 5M
-        
-        # Calculate rating (0-10 scale)
-        rating = (wealth_factor * 0.4 + production_factor * 0.4 + trade_factor * 0.2) * 10
-        return min(rating, 10.0)
-    
-    def _calculate_strategic_rating(self, player_stats: Dict[str, Any]) -> float:
-        """Calculate strategic rating based on planning and execution"""
-        sectors_controlled = player_stats.get("sectors_controlled", 0)
-        diplomatic_actions = player_stats.get("diplomatic_actions", 0)
-        strategic_victories = player_stats.get("strategic_victories", 0)
-        exploration_bonus = player_stats.get("sectors_explored", 0)
-        
-        # Control factor
-        control_factor = min(sectors_controlled / 10, 1.0)  # Normalize to 10 sectors
-        
-        # Diplomatic factor
-        diplomatic_factor = min(diplomatic_actions / 50, 1.0)  # Normalize to 50 actions
-        
-        # Victory factor
-        victory_factor = min(strategic_victories / 5, 1.0)  # Normalize to 5 victories
-        
-        # Exploration factor
-        exploration_factor = min(exploration_bonus / 20, 1.0)  # Normalize to 20 sectors
-        
-        # Calculate rating (0-10 scale)
-        rating = (control_factor * 0.3 + diplomatic_factor * 0.2 + 
-                 victory_factor * 0.3 + exploration_factor * 0.2) * 10
-        return min(rating, 10.0)
-    
-    def get_player_score_breakdown(self, user_id: int, db: Session) -> ScoreBreakdown:
-        """Get detailed score breakdown for a player"""
-        # Check cache first
-        if user_id in self._score_cache:
-            return self._score_cache[user_id]
-        
-        # Get player data
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            return ScoreBreakdown()
-        
-        # Get player statistics
-        player_stats = self._get_player_statistics(user_id, db)
-        
-        # Calculate scores
-        kill_score = self.calculate_kill_score(player_stats.get("kills", []))
-        planet_score = self.calculate_planet_score(player_stats.get("planets", []))
-        team_score = self.calculate_team_score(player_stats.get("team_stats", {}))
-        net_worth = self.calculate_net_worth(player_stats.get("assets", {}))
-        
-        # Calculate ratings
-        combat_rating, economic_rating, strategic_rating, overall_rating = \
-            self.calculate_ratings(player_stats)
-        
-        breakdown = ScoreBreakdown(
-            kill_score=kill_score,
-            planet_score=planet_score,
-            team_score=team_score,
-            net_worth=net_worth,
-            combat_rating=combat_rating,
-            economic_rating=economic_rating,
-            strategic_rating=strategic_rating,
-            overall_rating=overall_rating
-        )
-        
-        # Cache result
-        self._score_cache[user_id] = breakdown
-        return breakdown
-    
-    def _get_player_statistics(self, user_id: int, db: Session) -> Dict[str, Any]:
-        """Get comprehensive player statistics"""
-        # This would be implemented with actual database queries
-        # For now, return mock data structure
-        return {
-            "kills": [],
-            "planets": [],
-            "team_stats": {},
-            "assets": {},
-            "days_active": 1,
-            "battles": 0,
-            "deaths": 0,
-            "damage_dealt": 0,
-            "damage_taken": 0,
-            "planets_controlled": 0,
-            "trade_volume": 0,
-            "production_output": 0,
-            "sectors_controlled": 0,
-            "diplomatic_actions": 0,
-            "strategic_victories": 0,
-            "sectors_explored": 0
-        }
-    
-    def get_player_rankings(self, db: Session, limit: int = 100) -> List[PlayerRanking]:
-        """Get player rankings"""
-        cache_key = f"player_rankings_{limit}"
-        
-        # Check cache
-        if (cache_key in self._ranking_cache and 
-            self._cache_timestamp and 
-            datetime.utcnow() - self._cache_timestamp < timedelta(minutes=5)):
-            return self._ranking_cache[cache_key]
-        
-        rankings = []
-        
-        # Get all users with their scores
-        users = db.query(User).all()
-        
-        for user in users:
-            score_breakdown = self.get_player_score_breakdown(user.id, db)
-            total_score = score_breakdown.get_total_score()
+    def calculate_kill_score(self, user_id: int, db: Session) -> int:
+        """Calculate kill score based on ships destroyed"""
+        try:
+            # Get user's kill history from database
+            # This would need to be implemented in the database schema
+            # For now, we'll use a placeholder calculation
             
-            # Get team information
-            team_name = None
-            if hasattr(user, 'team') and user.team:
-                team_name = user.team.team_name
+            # In the original game, kill score was based on:
+            # 1. Ship class points of destroyed ships
+            # 2. Bonus percentage of killed player's score
+            # 3. Score reduction for the killed player
             
-            ranking = PlayerRanking(
-                user_id=user.id,
+            # Placeholder calculation - would need actual kill records
+            kill_score = 0
+            
+            # TODO: Implement actual kill tracking in database
+            # Example calculation:
+            # for kill in user_kills:
+            #     ship_points = self.ship_class_points.get(kill.ship_class, 10)
+            #     bonus = kill.victim_score * 0.1  # 10% bonus
+            #     kill_score += ship_points + bonus
+            
+            return kill_score
+            
+        except Exception as e:
+            logger.error(f"Error calculating kill score for user {user_id}: {e}")
+            return 0
+    
+    def calculate_planet_score(self, user_id: int, db: Session) -> int:
+        """Calculate planet score based on controlled planets"""
+        try:
+            # Get user's planets
+            planets = db.query(Planet).filter(Planet.owner_id == user_id).all()
+            
+            planet_score = 0
+            
+            for planet in planets:
+                # Base score per planet
+                base_score = game_config.get_config("planet_population_value", 10)
+                
+                # Population bonus
+                population_bonus = planet.population * base_score
+                
+                # Production bonus
+                production_bonus = planet.production_rate * game_config.get_config("planet_production_value", 5)
+                
+                # Environment bonus
+                environment_bonus = (planet.environment_factor / 100.0) * 100
+                
+                # Resource bonus
+                resource_bonus = (planet.resource_factor / 100.0) * 50
+                
+                # Strategic bonus for multiple planets
+                strategic_bonus = game_config.get_config("planet_strategic_bonus", 0.2)
+                if len(planets) > 1:
+                    strategic_bonus *= (len(planets) - 1)
+                
+                planet_score += int(population_bonus + production_bonus + 
+                                  environment_bonus + resource_bonus + strategic_bonus)
+            
+            return planet_score
+            
+        except Exception as e:
+            logger.error(f"Error calculating planet score for user {user_id}: {e}")
+            return 0
+    
+    def calculate_team_score(self, user_id: int, db: Session) -> int:
+        """Calculate team score using original formula (A/B)+(C*B)"""
+        try:
+            # Get user's team
+            user = db.query(User).filter(User.id == user_id).first()
+            if not user or not user.team_id:
+                return 0
+            
+            team = db.query(Team).filter(Team.id == user.team_id).first()
+            if not team:
+                return 0
+            
+            # Get all team members
+            team_members = db.query(User).filter(User.team_id == team.id).all()
+            if not team_members:
+                return 0
+            
+            # Calculate individual scores for all team members
+            total_individual_score = 0
+            for member in team_members:
+                member_kill_score = self.calculate_kill_score(member.id, db)
+                member_planet_score = self.calculate_planet_score(member.id, db)
+                total_individual_score += member_kill_score + member_planet_score
+            
+            # Apply original team scoring formula: (A/B)+(C*B)
+            # A = sum of individual scores
+            # B = number of team members
+            # C = team bonus base
+            A = total_individual_score
+            B = len(team_members)
+            C = self.team_bonus_base
+            
+            team_score = int((A / B) + (C * B))
+            
+            # Apply coordination bonus
+            coordination_bonus = game_config.get_config("team_coordination_bonus", 0.5)
+            team_score = int(team_score * (1.0 + coordination_bonus))
+            
+            return team_score
+            
+        except Exception as e:
+            logger.error(f"Error calculating team score for user {user_id}: {e}")
+            return 0
+    
+    def calculate_total_score(self, user_id: int, db: Session) -> int:
+        """Calculate total player score"""
+        try:
+            kill_score = self.calculate_kill_score(user_id, db)
+            planet_score = self.calculate_planet_score(user_id, db)
+            team_score = self.calculate_team_score(user_id, db)
+            
+            total_score = kill_score + planet_score + team_score
+            
+            return total_score
+            
+        except Exception as e:
+            logger.error(f"Error calculating total score for user {user_id}: {e}")
+            return 0
+    
+    def get_player_rankings(self, db: Session, limit: int = 100) -> List[PlayerScore]:
+        """Get player rankings by total score"""
+        try:
+            # Get all active users
+            users = db.query(User).filter(User.is_active == True).all()
+            
+            player_scores = []
+            
+            for user in users:
+                total_score = self.calculate_total_score(user.id, db)
+                kill_score = self.calculate_kill_score(user.id, db)
+                planet_score = self.calculate_planet_score(user.id, db)
+                team_score = self.calculate_team_score(user.id, db)
+                
+                player_scores.append(PlayerScore(
+                    user_id=user.id,
+                    username=user.username,
+                    kill_score=kill_score,
+                    planet_score=planet_score,
+                    team_score=team_score,
+                    total_score=total_score,
+                    rank=0,  # Will be set after sorting
+                    last_updated=datetime.utcnow()
+                ))
+            
+            # Sort by total score (descending)
+            player_scores.sort(key=lambda x: x.total_score, reverse=True)
+            
+            # Assign ranks
+            for i, player in enumerate(player_scores):
+                player.rank = i + 1
+            
+            return player_scores[:limit]
+            
+        except Exception as e:
+            logger.error(f"Error getting player rankings: {e}")
+            return []
+    
+    def get_team_rankings(self, db: Session, limit: int = 50) -> List[TeamScore]:
+        """Get team rankings by total score"""
+        try:
+            # Get all active teams
+            teams = db.query(Team).filter(Team.is_active == True).all()
+            
+            team_scores = []
+            
+            for team in teams:
+                # Get team members
+                team_members = db.query(User).filter(User.team_id == team.id).all()
+                if not team_members:
+                    continue
+                
+                # Calculate team score using first member (team score is same for all members)
+                team_score = self.calculate_team_score(team_members[0].id, db)
+                
+                # Calculate average individual score
+                total_individual_score = 0
+                for member in team_members:
+                    individual_score = (self.calculate_kill_score(member.id, db) + 
+                                      self.calculate_planet_score(member.id, db))
+                    total_individual_score += individual_score
+                
+                average_score = total_individual_score / len(team_members)
+                
+                team_scores.append(TeamScore(
+                    team_id=team.id,
+                    team_name=team.team_name,
+                    total_score=team_score,
+                    member_count=len(team_members),
+                    average_score=average_score,
+                    rank=0,  # Will be set after sorting
+                    last_updated=datetime.utcnow()
+                ))
+            
+            # Sort by total score (descending)
+            team_scores.sort(key=lambda x: x.total_score, reverse=True)
+            
+            # Assign ranks
+            for i, team in enumerate(team_scores):
+                team.rank = i + 1
+            
+            return team_scores[:limit]
+            
+        except Exception as e:
+            logger.error(f"Error getting team rankings: {e}")
+            return []
+    
+    def update_player_score(self, user_id: int, db: Session) -> PlayerScore:
+        """Update and return player score"""
+        try:
+            user = db.query(User).filter(User.id == user_id).first()
+            if not user:
+                raise ValueError(f"User {user_id} not found")
+            
+            total_score = self.calculate_total_score(user_id, db)
+            kill_score = self.calculate_kill_score(user_id, db)
+            planet_score = self.calculate_planet_score(user_id, db)
+            team_score = self.calculate_team_score(user_id, db)
+            
+            # Update user's score in database
+            # This would need to be added to the User model
+            # user.total_score = total_score
+            # user.kill_score = kill_score
+            # user.planet_score = planet_score
+            # user.team_score = team_score
+            # user.score_updated_at = datetime.utcnow()
+            # db.commit()
+            
+            return PlayerScore(
+                user_id=user_id,
                 username=user.username,
-                rank=0,  # Will be set after sorting
-                score=total_score,
-                score_breakdown=score_breakdown,
-                team_name=team_name,
-                last_active=user.updated_at
-            )
-            rankings.append(ranking)
-        
-        # Sort by total score
-        rankings.sort(key=lambda x: x.score, reverse=True)
-        
-        # Assign ranks
-        for i, ranking in enumerate(rankings):
-            ranking.rank = i + 1
-        
-        # Cache results
-        self._ranking_cache[cache_key] = rankings
-        self._cache_timestamp = datetime.utcnow()
-        
-        return rankings[:limit]
-    
-    def get_team_rankings(self, db: Session, limit: int = 50) -> List[TeamRanking]:
-        """Get team rankings"""
-        cache_key = f"team_rankings_{limit}"
-        
-        # Check cache
-        if (cache_key in self._ranking_cache and 
-            self._cache_timestamp and 
-            datetime.utcnow() - self._cache_timestamp < timedelta(minutes=5)):
-            return self._ranking_cache[cache_key]
-        
-        rankings = []
-        
-        # Get all teams with their scores
-        teams = db.query(Team).all()
-        
-        for team in teams:
-            # Calculate team score
-            team_stats = self._get_team_statistics(team.id, db)
-            total_score = self.calculate_team_score(team_stats)
-            
-            # Calculate coordination bonus
-            coordination_bonus = self._calculate_coordination_bonus(team.id, db)
-            
-            ranking = TeamRanking(
-                team_id=team.id,
-                team_name=team.team_name,
-                rank=0,  # Will be set after sorting
+                kill_score=kill_score,
+                planet_score=planet_score,
+                team_score=team_score,
                 total_score=total_score,
-                member_count=len(team.members) if hasattr(team, 'members') else 0,
-                average_score=total_score / max(len(team.members), 1) if hasattr(team, 'members') else 0,
-                coordination_bonus=coordination_bonus,
-                last_active=team.updated_at
+                rank=0,  # Would need to calculate rank
+                last_updated=datetime.utcnow()
             )
-            rankings.append(ranking)
-        
-        # Sort by total score
-        rankings.sort(key=lambda x: x.total_score, reverse=True)
-        
-        # Assign ranks
-        for i, ranking in enumerate(rankings):
-            ranking.rank = i + 1
-        
-        # Cache results
-        self._ranking_cache[cache_key] = rankings
-        self._cache_timestamp = datetime.utcnow()
-        
-        return rankings[:limit]
+            
+        except Exception as e:
+            logger.error(f"Error updating player score for user {user_id}: {e}")
+            raise
     
-    def _get_team_statistics(self, team_id: int, db: Session) -> Dict[str, Any]:
-        """Get team statistics"""
-        # This would be implemented with actual database queries
-        return {
-            "member_count": 0,
-            "coordinated_actions": 0,
-            "victories": 0
-        }
+    def get_ship_class_points(self, ship_class: str) -> int:
+        """Get point value for ship class"""
+        return self.ship_class_points.get(ship_class, 10)
     
-    def _calculate_coordination_bonus(self, team_id: int, db: Session) -> float:
-        """Calculate team coordination bonus"""
-        # This would analyze team activities and coordination
-        return 1.0
+    def add_kill_record(self, killer_id: int, victim_id: int, ship_class: str, 
+                       victim_score: int, db: Session) -> bool:
+        """Add a kill record and update scores"""
+        try:
+            # This would need to be implemented in the database schema
+            # For now, we'll just log the kill
+            
+            ship_points = self.get_ship_class_points(ship_class)
+            bonus = int(victim_score * 0.1)  # 10% bonus from original game
+            
+            logger.info(f"Kill recorded: User {killer_id} destroyed {ship_class} "
+                       f"belonging to user {victim_id}. Points: {ship_points}, Bonus: {bonus}")
+            
+            # TODO: Implement actual kill tracking
+            # kill_record = KillRecord(
+            #     killer_id=killer_id,
+            #     victim_id=victim_id,
+            #     ship_class=ship_class,
+            #     points_awarded=ship_points,
+            #     bonus_awarded=bonus,
+            #     timestamp=datetime.utcnow()
+            # )
+            # db.add(kill_record)
+            # db.commit()
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error adding kill record: {e}")
+            return False
     
-    def check_achievements(self, user_id: int, db: Session) -> List[Achievement]:
-        """Check which achievements a player has earned"""
-        player_stats = self._get_player_statistics(user_id, db)
-        earned_achievements = []
-        
-        for achievement in self._achievements.values():
-            if self._check_achievement_requirement(achievement, player_stats):
-                earned_achievements.append(achievement)
-        
-        return earned_achievements
-    
-    def _check_achievement_requirement(self, achievement: Achievement, 
-                                     player_stats: Dict[str, Any]) -> bool:
-        """Check if player meets achievement requirement"""
-        requirement = achievement.requirement
-        
-        for key, required_value in requirement.items():
-            player_value = player_stats.get(key, 0)
-            if player_value < required_value:
-                return False
-        
-        return True
-    
-    def clear_cache(self):
-        """Clear all cached data"""
-        self._score_cache.clear()
-        self._ranking_cache.clear()
-        self._cache_timestamp = None
-        logger.info("Scoring service cache cleared")
+    def recalculate_all_scores(self, db: Session) -> Dict[str, Any]:
+        """Recalculate all player and team scores"""
+        try:
+            start_time = datetime.utcnow()
+            
+            # Get all active users
+            users = db.query(User).filter(User.is_active == True).all()
+            
+            updated_count = 0
+            for user in users:
+                try:
+                    self.update_player_score(user.id, db)
+                    updated_count += 1
+                except Exception as e:
+                    logger.error(f"Error updating score for user {user.id}: {e}")
+            
+            end_time = datetime.utcnow()
+            duration = (end_time - start_time).total_seconds()
+            
+            result = {
+                "success": True,
+                "updated_players": updated_count,
+                "total_players": len(users),
+                "duration_seconds": duration,
+                "timestamp": end_time.isoformat()
+            }
+            
+            logger.info(f"Score recalculation completed: {updated_count}/{len(users)} players updated in {duration:.2f}s")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error recalculating scores: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
 
 
 # Global scoring service instance

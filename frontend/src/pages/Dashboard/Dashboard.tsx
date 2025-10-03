@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
 import { fetchShips } from '../../store/slices/shipsSlice';
 import { fetchPlanets } from '../../store/slices/planetsSlice';
@@ -13,6 +13,7 @@ import {
   FaClock,
   FaWifi
 } from 'react-icons/fa';
+import WelcomeMessage from '../../components/Onboarding/WelcomeMessage';
 
 const DashboardContainer = styled.div`
   max-width: 1200px;
@@ -220,6 +221,8 @@ const Dashboard: React.FC = () => {
   const { game_time, tick_number, is_connected } = useAppSelector((state) => state.game);
   const { ships, isLoading: shipsLoading } = useAppSelector((state) => state.ships);
   const { planets, isLoading: planetsLoading } = useAppSelector((state) => state.planets);
+  
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     dispatch(getGameState());
@@ -227,9 +230,22 @@ const Dashboard: React.FC = () => {
     dispatch(fetchPlanets({}));
   }, [dispatch]);
 
-  const activeShips = ships.filter(ship => ship.is_active).length;
-  const colonizedPlanets = planets.filter(planet => planet.is_colonized).length;
-  const totalFleetSize = ships.length;
+  // Check if this is a new user (created in last 5 minutes)
+  useEffect(() => {
+    if (user?.created_at) {
+      const createdTime = new Date(user.created_at).getTime();
+      const now = Date.now();
+      const fiveMinutesAgo = now - (5 * 60 * 1000);
+      
+      if (createdTime > fiveMinutesAgo) {
+        setShowWelcome(true);
+      }
+    }
+  }, [user?.created_at]);
+
+  const activeShips = ships?.filter(ship => ship.is_active)?.length || 0;
+  const colonizedPlanets = planets?.filter(planet => planet.is_colonized)?.length || 0;
+  const totalFleetSize = ships?.length || 0;
 
   // Mock recent activity data
   const recentActivity = [
@@ -249,8 +265,15 @@ const Dashboard: React.FC = () => {
 
   return (
     <DashboardContainer>
+      {showWelcome && (
+        <WelcomeMessage 
+          isNewUser={true}
+          onStartPlaying={() => setShowWelcome(false)}
+        />
+      )}
+      
       <WelcomeSection>
-        <WelcomeTitle>Welcome back, Commander {user?.username}</WelcomeTitle>
+        <WelcomeTitle>Welcome back, Commander {user?.userid}</WelcomeTitle>
         <WelcomeSubtitle>
           The galaxy awaits your command. Current game time: {game_time} (Tick {tick_number})
         </WelcomeSubtitle>

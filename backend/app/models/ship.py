@@ -13,8 +13,39 @@ class ShipType(Base):
     __tablename__ = "ship_types"
     
     id = Column(Integer, primary_key=True, index=True)
-    type_name = Column(String(20), nullable=False, unique=True)  # USER, CYBORG, DROID
-    description = Column(Text)
+    typename = Column(String(50), nullable=False, unique=True)  # USER, CYBORG, DROID
+    shipname = Column(String(50), nullable=False)  # Ship name/title
+    
+    # Ship capabilities
+    max_shields = Column(Integer, default=0)
+    max_phasers = Column(Integer, default=0)
+    max_torpedoes = Column(Integer, default=0)
+    max_missiles = Column(Integer, default=0)
+    
+    # Special equipment flags
+    has_decoy = Column(Boolean, default=False)
+    has_jammer = Column(Boolean, default=False)
+    has_zipper = Column(Boolean, default=False)
+    has_mine = Column(Boolean, default=False)
+    max_attack = Column(Integer, default=0)
+    max_cloak = Column(Integer, default=0)
+    
+    # Performance characteristics
+    max_acceleration = Column(Integer, default=0)
+    max_warp = Column(Integer, default=0)
+    max_tons = Column(BigInteger, default=0)
+    max_price = Column(BigInteger, default=0)
+    max_points = Column(Integer, default=0)
+    max_type = Column(Integer, default=0)
+    scan_range = Column(Integer, default=0)
+    
+    # AI behavior settings
+    cybs_can_attack = Column(Boolean, default=True)
+    lowest_to_attack = Column(Integer, default=1)
+    no_claim = Column(Boolean, default=False)
+    total_to_create = Column(Integer, default=0)
+    tough_factor = Column(Integer, default=0)
+    damage_factor = Column(Integer, default=0)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -24,7 +55,7 @@ class ShipType(Base):
     ship_classes = relationship("ShipClass", back_populates="ship_type")
     
     def __repr__(self):
-        return f"<ShipType(type_name='{self.type_name}')>"
+        return f"<ShipType(typename='{self.typename}')>"
 
 
 class ShipClass(Base):
@@ -33,44 +64,10 @@ class ShipClass(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     class_number = Column(Integer, nullable=False)  # S01, S02, etc.
-    typename = Column(String(50), nullable=False)  # SHIP.typename (class name)
-    shipname = Column(String(50), nullable=False)  # SHIP.shipname (ship title name)
+    name = Column(String(50), nullable=False)  # SHIP.name (class name)
+    description = Column(Text)  # SHIP description
     ship_type_id = Column(Integer, ForeignKey("ship_types.id"), nullable=False)
-    
-    # Ship capabilities (from SHIP structure)
-    max_shields = Column(Integer, default=0)       # SHIP.max_shlds (0-19)
-    max_phasers = Column(Integer, default=0)       # SHIP.max_phasr (0-19)
-    max_torpedoes = Column(Integer, default=0)     # SHIP.max_torps (boolean)
-    max_missiles = Column(Integer, default=0)      # SHIP.max_missl (boolean)
-    
-    # Special equipment flags
-    has_decoy = Column(Boolean, default=False)     # SHIP.has_decoy
-    has_jammer = Column(Boolean, default=False)    # SHIP.has_jam
-    has_zipper = Column(Boolean, default=False)    # SHIP.has_zip
-    has_mine = Column(Boolean, default=False)      # SHIP.has_mine
-    has_attack_planet = Column(Boolean, default=False)  # Planet attack capability
-    has_cloaking = Column(Boolean, default=False)  # SHIP.max_cloak (boolean)
-    
-    # Performance characteristics
-    max_acceleration = Column(Integer, default=0)  # SHIP.max_accel (0-32767)
-    max_warp = Column(Integer, default=0)          # SHIP.max_warp (0-255)
-    max_tons = Column(BigInteger, default=0)       # SHIP.max_tons (cargo capacity)
-    max_price = Column(BigInteger, default=0)      # SHIP.max_price (purchase price)
-    max_points = Column(Integer, default=0)        # SHIP.max_points (kill points)
-    scan_range = Column(Integer, default=0)        # SHIP.scanrange (1-10000000)
-    
-    # AI behavior settings (for CYBORG/DROID ships)
-    cybs_can_attack = Column(Boolean, default=True)  # SHIP.cybs_can_att
-    number_to_attack = Column(Integer, default=0)    # Number of cybs to attack this class
-    lowest_to_attack = Column(Integer, default=1)    # SHIP.lowest_to_attk
-    no_claim = Column(Boolean, default=False)        # SHIP.noclaim
-    total_to_create = Column(Integer, default=0)     # SHIP.tot_to_create
-    tough_factor = Column(Integer, default=0)        # SHIP.tough_factor (0-1)
-    damage_factor = Column(Integer, default=90)      # SHIP.damfact (damage effect)
-    
-    # System flags
-    is_active = Column(Boolean, default=True)      # Whether this class is available
-    help_message = Column(Text)                    # Additional help text
+    is_available = Column(Boolean, default=True)    # From database schema
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -81,7 +78,7 @@ class ShipClass(Base):
     ships = relationship("Ship", back_populates="ship_class")
     
     def __repr__(self):
-        return f"<ShipClass(class_number={self.class_number}, typename='{self.typename}')>"
+        return f"<ShipClass(class_number={self.class_number}, name='{self.name}')>"
 
 
 

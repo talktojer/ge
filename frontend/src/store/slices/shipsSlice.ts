@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { Ship, PaginatedResponse, ShipCommand } from '../../types';
+import { Ship, PaginatedResponse, ShipCommand, ShipCreateRequest } from '../../types';
 import { shipsApi } from '../../services/api';
 
 interface ShipsState {
@@ -46,16 +46,16 @@ export const getShip = createAsyncThunk<Ship, number>(
   async (shipId: number, { rejectWithValue }) => {
     try {
       const response = await shipsApi.getShip(shipId);
-      return response.data.data;
+      return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to get ship');
     }
   }
 );
 
-export const createShip = createAsyncThunk<Ship, Partial<Ship>>(
+export const createShip = createAsyncThunk<Ship, ShipCreateRequest>(
   'ships/createShip',
-  async (shipData: Partial<Ship>, { rejectWithValue }) => {
+  async (shipData: ShipCreateRequest, { rejectWithValue }) => {
     try {
       const response = await shipsApi.createShip(shipData);
       return response.data.data;

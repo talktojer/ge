@@ -23,7 +23,6 @@ import Settings from './pages/Settings/Settings';
 // Styling
 import './App.css';
 import GlobalStyles from './styles/GlobalStyles';
-import GameEffectsProvider from './components/Effects/GameEffectsProvider';
 
 function AppContent() {
   const dispatch = useAppDispatch();
@@ -131,9 +130,7 @@ function AppContent() {
 function App() {
   return (
     <Provider store={store}>
-      <GameEffectsProvider>
-        <AppContent />
-      </GameEffectsProvider>
+      <AppContent />
     </Provider>
   );
 }

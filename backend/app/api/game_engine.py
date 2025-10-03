@@ -73,6 +73,7 @@ class GameStatsResponse(BaseModel):
     active_ships: int
     game_running: bool
     game_time: str
+    tick_number: int
     galaxy: Dict[str, Any]
     tick_system: Dict[str, Any]
 
@@ -114,10 +115,50 @@ async def stop_game():
 async def get_game_status():
     """Get game status and statistics"""
     try:
+        # Auto-initialize game engine if not already initialized
+        if not game_engine._initialized:
+            await game_engine.initialize()
+        
         stats = game_engine.get_game_statistics()
         return GameStatsResponse(**stats)
     except Exception as e:
         logger.error(f"Error getting game status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/tick")
+async def increment_game_tick():
+    """Manually increment the game tick (for testing/admin purposes)"""
+    try:
+        # Auto-initialize game engine if not already initialized
+        if not game_engine._initialized:
+            await game_engine.initialize()
+        
+        # Increment the tick
+        game_engine.increment_tick()
+        current_tick = game_engine.get_current_tick()
+        
+        return {
+            "message": "Game tick incremented successfully",
+            "current_tick": current_tick
+        }
+    except Exception as e:
+        logger.error(f"Error incrementing game tick: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/game/state")
+async def get_game_state():
+    """Get current game state (alias for /status)"""
+    try:
+        # Auto-initialize game engine if not already initialized
+        if not game_engine._initialized:
+            await game_engine.initialize()
+        
+        stats = game_engine.get_game_statistics()
+        return GameStatsResponse(**stats)
+    except Exception as e:
+        logger.error(f"Error getting game state: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

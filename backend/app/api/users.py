@@ -17,6 +17,7 @@ from ..core.auth import auth_service, get_current_user
 from ..core.user_service import user_service
 from ..core.coordinates import Coordinate
 from ..models.user import User
+from ..models.ship import Ship, ShipClass
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +27,14 @@ security = HTTPBearer()
 
 # Pydantic models for API requests/responses
 class UserRegistrationRequest(BaseModel):
-    userid: str
+    username: str
     email: EmailStr
     password: str
+    confirm_password: str
 
 
 class UserLoginRequest(BaseModel):
-    userid: str
+    username: str
     password: str
 
 
@@ -91,11 +93,20 @@ class ShipResponse(BaseModel):
     position: Dict[str, float]
     heading: float
     speed: float
-    energy: int
+    energy: float
     shields: int
     max_shields: int
     damage: float
     created_at: str
+
+
+class GameStateResponse(BaseModel):
+    current_user: Optional[UserResponse] = None
+    selected_ship: Optional[ShipResponse] = None
+    selected_planet: Optional[Dict[str, Any]] = None
+    game_time: str
+    tick_number: int
+    is_connected: bool
 
 
 class LoginResponse(BaseModel):
@@ -114,9 +125,17 @@ async def register_user(
 ):
     """Register a new user (email verification disabled for now)"""
     try:
+        # Validate password confirmation
+        if user_data.password != user_data.confirm_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Passwords do not match"
+            )
+        
+        # Use username as userid (they can be the same in this system)
         result = user_service.register_user(
             db=db,
-            userid=user_data.userid,
+            userid=user_data.username,
             email=user_data.email,
             password=user_data.password
         )
@@ -164,7 +183,7 @@ async def login_user(
         
         result = user_service.login_user(
             db=db,
-            userid=login_data.userid,
+            userid=login_data.username,
             password=login_data.password,
             ip_address=ip_address,
             user_agent=user_agent
@@ -216,6 +235,82 @@ async def get_user_profile(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get profile"
+        )
+
+
+@router.get("/game-state", response_model=GameStateResponse)
+async def get_user_game_state(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user's game state including profile, selected ship, and game info"""
+    try:
+        # Get user profile
+        user_profile_data = user_service.get_user_profile(db=db, user_id=current_user["id"])
+        user_data = user_profile_data["user"]  # Extract user data from nested structure
+        
+        # Ensure user has at least one ship (create starter ship if needed)
+        user_ships = user_service.get_user_ships(db=db, user_id=current_user["id"])
+        
+        # If user has no ships, create a starter ship
+        if not user_ships:
+            logger.info(f"User {current_user['userid']} has no ships, creating starter ship...")
+            try:
+                starter_ship_result = user_service.create_ship(
+                    db=db,
+                    user_id=current_user["id"],
+                    ship_name=f"{current_user['userid']}'s Starter Ship",
+                    ship_class=1  # Ship class 1 - Interceptor
+                )
+                logger.info(f"Created starter ship for user {current_user['userid']}")
+                # Refresh user ships after creation
+                user_ships = user_service.get_user_ships(db=db, user_id=current_user["id"])
+            except Exception as e:
+                logger.error(f"Failed to create starter ship for user {current_user['userid']}: {e}")
+        
+        selected_ship = None
+        if user_ships:
+            # For now, just select the first ship as the active one
+            # In the future, this should be based on user preference or last selected ship
+            ship_data = user_ships[0]
+            # Map database field names to ShipResponse field names
+            ship_response_data = {
+                "id": ship_data["id"],
+                "ship_name": ship_data["ship_name"],
+                "ship_class": ship_data["ship_class"],
+                "status": "active" if ship_data["status"] == 1 else "inactive",
+                "position": ship_data["position"],
+                "heading": ship_data["heading"],
+                "speed": ship_data["speed"],
+                "energy": ship_data["energy"],
+                "shields": ship_data["shields"],
+                "max_shields": ship_data["max_shields"],
+                "damage": ship_data["damage"],
+                "created_at": ship_data.get("created_at", "").isoformat() if ship_data.get("created_at") else ""
+            }
+            selected_ship = ShipResponse(**ship_response_data)
+        
+        # Get current game time from game engine
+        from ..core.game_engine import game_engine
+        game_stats = game_engine.get_game_statistics()
+        game_time = game_stats.get('game_time', '')
+        tick_number = game_stats.get('tick_number', 0)
+        
+        return GameStateResponse(
+            current_user=UserResponse(**user_data),
+            selected_ship=selected_ship,
+            selected_planet=None,  # TODO: Implement planet selection
+            game_time=game_time,
+            tick_number=tick_number,
+            is_connected=True  # TODO: Implement actual connection status
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get game state error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get game state"
         )
 
 
@@ -291,15 +386,21 @@ async def create_ship(
         )
 
 
-@router.get("/ships", response_model=List[ShipResponse])
+@router.get("/ships", response_model=Dict[str, Any])
 async def get_user_ships(
     current_user: Dict[str, Any] = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get all user ships"""
     try:
-        result = user_service.get_user_ships(db=db, user_id=current_user["id"])
-        return [ShipResponse(**ship) for ship in result]
+        ships = user_service.get_user_ships(db=db, user_id=current_user["id"])
+        return {
+            "items": ships,
+            "page": 1,
+            "per_page": len(ships),
+            "total": len(ships),
+            "pages": 1
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -307,6 +408,158 @@ async def get_user_ships(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get ships"
+        )
+
+
+@router.get("/ships/{ship_id}", response_model=Dict[str, Any])
+async def get_ship_details(
+    ship_id: int,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get detailed ship information"""
+    try:
+        ship = db.query(Ship).filter(
+            Ship.id == ship_id,
+            Ship.user_id == current_user["id"]
+        ).first()
+        
+        if not ship:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ship not found"
+            )
+        
+        # Get ship class information
+        ship_class = db.query(ShipClass).filter(ShipClass.id == ship.ship_class_id).first()
+        
+        return {
+            "id": ship.id,
+            "name": ship.shipname,
+            "owner_id": ship.user_id,
+            "ship_type": ship_class.name if ship_class else "Unknown",
+            "ship_class": ship.shpclass,
+            "x": ship.x_coord,
+            "y": ship.y_coord,
+            "z": 0.0,
+            "sector": 1,
+            "heading": ship.heading,
+            "speed": ship.speed,
+            "hull_points": 100 - ship.damage,
+            "max_hull_points": 100,
+            "shields": ship.shield_charge,
+            "max_shields": 100,
+            "fuel": ship.energy,
+            "max_fuel": 50000,
+            "cargo_capacity": 1000,
+            "cargo_used": 0,
+            "weapons": ["Phaser"],
+            "is_active": (ship.status or 0) == 0,
+            "created_at": ship.created_at.isoformat() if ship.created_at else "2025-01-01T00:00:00Z",
+            "last_updated": ship.updated_at.isoformat() if ship.updated_at else "2025-01-01T00:00:00Z",
+            "status": "active" if (ship.status or 0) == 0 else "inactive",
+            "damage": ship.damage,
+            "energy": ship.energy,
+            "kills": ship.kills,
+            "phaser_strength": ship.phaser_strength,
+            "shield_status": ship.shield_status,
+            "cloak": ship.cloak,
+            "hostile": ship.hostile
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get ship details error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get ship details"
+        )
+
+
+@router.post("/ships/{ship_id}/move", response_model=Dict[str, Any])
+async def move_ship(
+    ship_id: int,
+    movement_data: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Move ship to new coordinates"""
+    try:
+        ship = db.query(Ship).filter(
+            Ship.id == ship_id,
+            Ship.user_id == current_user["id"]
+        ).first()
+        
+        if not ship:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ship not found"
+            )
+        
+        # Update ship position
+        ship.x_coord = movement_data.get("x", ship.x_coord)
+        ship.y_coord = movement_data.get("y", ship.y_coord)
+        ship.heading = movement_data.get("heading", ship.heading)
+        ship.speed = movement_data.get("speed", ship.speed)
+        
+        db.commit()
+        
+        return {
+            "message": "Ship moved successfully",
+            "new_position": {
+                "x": ship.x_coord,
+                "y": ship.y_coord
+            },
+            "heading": ship.heading,
+            "speed": ship.speed
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Move ship error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to move ship"
+        )
+
+
+@router.post("/ships/{ship_id}/repair", response_model=Dict[str, Any])
+async def repair_ship(
+    ship_id: int,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Repair ship damage"""
+    try:
+        ship = db.query(Ship).filter(
+            Ship.id == ship_id,
+            Ship.user_id == current_user["id"]
+        ).first()
+        
+        if not ship:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ship not found"
+            )
+        
+        # Repair ship (reduce damage)
+        repair_amount = 25.0  # Repair 25% damage
+        ship.damage = max(0.0, ship.damage - repair_amount)
+        
+        db.commit()
+        
+        return {
+            "message": "Ship repaired successfully",
+            "damage_remaining": ship.damage,
+            "hull_points": 100 - ship.damage
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Repair ship error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to repair ship"
         )
 
 

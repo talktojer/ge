@@ -112,12 +112,16 @@ class AuthService:
         
         # Create user (auto-verify if not specified)
         hashed_password = self.get_password_hash(password)
+        
+        # Extract is_verified from kwargs to avoid duplicate parameter error
+        is_verified = kwargs.pop('is_verified', True)
+        
         user = User(
             userid=userid,
             email=email,
             password_hash=hashed_password,
             is_active=True,
-            is_verified=kwargs.get('is_verified', True),  # Default to verified
+            is_verified=is_verified,
             **kwargs
         )
         
@@ -264,8 +268,11 @@ class AuthService:
     def get_user_stats(self, user: User) -> Dict[str, Any]:
         """Get user statistics"""
         return {
+            "id": user.id,
             "userid": user.userid,
             "email": user.email,
+            "is_active": user.is_active,
+            "is_verified": user.is_verified,
             "score": user.score,
             "kills": user.kills,
             "planets": user.planets,
@@ -274,7 +281,6 @@ class AuthService:
             "population": user.population,
             "noships": user.noships,
             "teamcode": user.teamcode,
-            "is_verified": user.is_verified,
             "last_login": user.last_login.isoformat() if user.last_login else None,
             "created_at": user.created_at.isoformat()
         }

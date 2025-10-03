@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: str = "http://localhost:13000"
     
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Get CORS origins as a list"""
+        return [origin.strip() for origin in self.cors_origins.split(",")]
+    
     # Game settings
     game_name: str = "Galactic Empire"
     game_version: str = "1.0.0"

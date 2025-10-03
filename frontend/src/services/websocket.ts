@@ -20,9 +20,11 @@ class WebSocketService {
       return;
     }
 
-    const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:8000';
+    const wsUrl = process.env.REACT_APP_WS_URL || 'http://localhost:18000';
+    // Convert ws:// URLs to http:// for Socket.IO
+    const socketUrl = wsUrl.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:');
     
-    this.socket = io(wsUrl, {
+    this.socket = io(socketUrl, {
       auth: {
         token: token,
       },

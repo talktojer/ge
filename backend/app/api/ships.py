@@ -13,6 +13,8 @@ from app.core.ship_operations import NavigationCommand
 from app.models.ship import ShipType, ShipClass, Ship
 from app.core.auth import get_current_user
 from app.models.user import User
+from app.websocket_events import game_broadcaster
+import asyncio
 
 router = APIRouter()
 
@@ -342,6 +344,14 @@ async def execute_navigation_command(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=result.get("message", "Navigation command failed")
         )
+    
+    # Broadcast ship movement update via WebSocket
+    if result.get("success", False) and result.get("ship_data"):
+        ship_data = result.get("ship_data", {})
+        ship_data["timestamp"] = result.get("timestamp")
+        
+        # Run WebSocket broadcast in background
+        asyncio.create_task(game_broadcaster.ship_moved(ship_id, ship_data))
     
     return result
 

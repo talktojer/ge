@@ -262,11 +262,12 @@ class CybertronTickProcessor(TickProcessor):
 class TickSystem:
     """Main tick system coordinator"""
     
-    def __init__(self):
+    def __init__(self, tick_callback=None):
         self.processors: Dict[TickType, TickProcessor] = {}
         self.configs: Dict[TickType, TickConfig] = {}
         self.running = False
         self.tasks: Dict[TickType, asyncio.Task] = {}
+        self.tick_callback = tick_callback  # Callback to increment global game tick
         
         # Initialize default configurations
         self._setup_default_configs()
@@ -359,6 +360,10 @@ class TickSystem:
                 # Update statistics
                 processor.stats.total_ticks += 1
                 processor.stats.last_tick_time = start_time
+                
+                # Call global tick callback if this is the main movement processor
+                if tick_type == TickType.MOVEMENT_PROCESSING and self.tick_callback:
+                    self.tick_callback()
                 
                 # Calculate sleep time
                 elapsed = time.time() - start_time

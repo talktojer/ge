@@ -1,7 +1,7 @@
 // Core game types
 export interface User {
   id: number;
-  username: string;
+  userid: string;
   email: string;
   team_id?: number;
   created_at: string;
@@ -25,7 +25,7 @@ export interface Ship {
   name: string;
   owner_id: number;
   ship_type: string;
-  ship_class: string;
+  ship_class: number;
   x: number;
   y: number;
   z: number;
@@ -42,6 +42,11 @@ export interface Ship {
   is_active: boolean;
   created_at: string;
   last_updated: string;
+}
+
+export interface ShipCreateRequest {
+  ship_name: string;
+  ship_class: number;
 }
 
 export interface Planet {
@@ -165,7 +170,7 @@ export interface GameUpdate {
 
 // Form types
 export interface LoginForm {
-  username: string;
+  username: string; // This maps to userid in the backend
   password: string;
 }
 
