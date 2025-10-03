@@ -33,7 +33,9 @@ services:
 
   # FastAPI Application
   web:
-    build: ./backend
+    build: 
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -53,8 +55,8 @@ services:
   # Celery Worker
   celery-worker:
     build: 
-      context: ./backend
-      dockerfile: Dockerfile.celery
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/galactic_empire
       - REDIS_URL=redis://redis:6379/0
@@ -74,8 +76,8 @@ services:
   # Celery Beat Scheduler
   celery-beat:
     build: 
-      context: ./backend
-      dockerfile: Dockerfile.celery
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/galactic_empire
       - REDIS_URL=redis://redis:6379/0
@@ -95,8 +97,8 @@ services:
   # Flower Monitoring (optional)
   flower:
     build: 
-      context: ./backend
-      dockerfile: Dockerfile.celery
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
