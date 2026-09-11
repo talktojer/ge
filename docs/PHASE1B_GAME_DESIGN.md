@@ -13,7 +13,7 @@
 
 **One-sentence pitch:** Galactic Empire is a strategic mobile MMO that delivers EVE Online's territorial conquest and persistent economy in 2–5 minute sessions, where every command you issue ripples across a shared universe while you're away.
 
-**Phase 1b scope:** This document establishes the game design foundation for the modern mobile reimagining of MajorBBS Galactic Empire. It translates the legacy BBS space-conquest fantasy into a mobile-first live MMO with glanceable territory management, asynchronous strategic pacing, and persistent faction warfare. **No implementation code is included**—only design decisions, systems architecture, player loops, and handoff requirements for Client UX and Stack teams.
+**Phase 1b scope:** This document establishes the game design foundation for the modern mobile reimagining of MajorBBS Galactic Empire. It translates the legacy BBS space-conquest fantasy into a mobile-first live MMO with glanceable territory management, asynchronous strategic pacing, and persistent faction warfare. **No implementation code is included**—only design decisions, systems architecture, player loops, and handoff requirements for Client UX and Stack teams. **All 7 Phase 1a decisions are now settled** (monetization B locked by Jeremy; remaining six Designer picks accepted by Empire Lead).
 
 **Core design pillars:**
 1. **Strategic fleet combat** (not twitch): ~6-second combat resolution preserves tactical depth over APM
@@ -417,6 +417,8 @@ Phase 1a provided a preliminary analysis (§8). Here's the **locked Designer sta
 
 ## 8. Answers to Phase 1a's 7 Decisions
 
+**Status: All 7 decisions settled.** Monetization (§8.4 option B) locked by Jeremy via Empire Lead confirmation. Remaining six decisions are Designer picks accepted by Empire Lead. All seven are now final for Phase 1b.
+
 Phase 1a §9 posed seven open questions. Here are the **locked Phase 1b design picks**:
 
 ### 8.1 Universe Size & Topology (Phase 1a §9.1)
@@ -476,6 +478,8 @@ Phase 1a §9 posed seven open questions. Here are the **locked Phase 1b design p
 ### 8.4 Monetization (Phase 1a §9.4)
 
 **Decision: B (F2P + cosmetics only, no P2W). No production speedups that buy power. Cosmetic ships/planets/empire brands OK. Subscription (D) may be explored later as Cosmetics+QoL (not power).**
+
+**Status: LOCKED (Jeremy confirmed via Empire Lead).**
 
 **Rationale:**
 - **Why F2P?** Broadest audience. Mobile MMOs die behind $10 paywall. F2P proven by successful comp (Albion Online mobile, EVE Echoes pre-P2W pivot).
