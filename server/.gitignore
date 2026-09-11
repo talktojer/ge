@@ -12,7 +12,13 @@ ENV/
 # Environment variables (NEVER commit .env)
 .env
 .env.local
-.env.*.local
+.env.production
+.env.staging
+.env.development
+.env.test
+
+# Allow .env.example (placeholders only)
+!.env.example
 
 # Firebase credentials (NEVER commit service account JSON)
 firebase-credentials.json
