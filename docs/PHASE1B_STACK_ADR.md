@@ -46,7 +46,7 @@ The [Phase 1a Legacy System Map](./PHASE1A_LEGACY_SYSTEM_MAP.md) documents the 1
 
 ### 1.2 Locked Constraints
 
-- **Client:** Unity Editor 6000.0.10f1, iOS + Android targets
+- **Client:** Unity Editor 6000.4.10f1, iOS + Android targets
 - **Backend foundation:** FastAPI + supporting stack (documented here)
 - **True live MMO:** One shared persistent galaxy (not instanced lobbies)
 - **Strategic fleet/conquest core:** Preserve turn-based strategic pacing (6s combat resolution, 55s production cycles) as server-driven event cadence
@@ -84,7 +84,7 @@ We adopt a **unified FastAPI + Python asyncio monorepo** architecture with the f
 
 | Layer | Technology | Role |
 |-------|-----------|------|
-| **Client** | Unity 6000.0.10f1 (iOS + Android) | 3D/2D client rendering, input handling, local prediction/interpolation. Communicates via HTTPS REST (auth, inventory, commands) + WebSockets (sector/fleet subscriptions, realtime deltas). Push notifications via **Firebase Cloud Messaging (FCM) + APNs** (routed through Firebase) for offline alerts. |
+| **Client** | Unity 6000.4.10f1 (iOS + Android) | 3D/2D client rendering, input handling, local prediction/interpolation. Communicates via HTTPS REST (auth, inventory, commands) + WebSockets (sector/fleet subscriptions, realtime deltas). Push notifications via **Firebase Cloud Messaging (FCM) + APNs** (routed through Firebase) for offline alerts. |
 | **Edge/API** | **FastAPI** (Python 3.11+) | REST endpoints for: authentication session exchange (Firebase JWT → short-lived API token), player inventory (ships, items, cash), planet CRUD (claim, set production rates, view status), fleet commands (move, fire, dock, trade). **Starlette WebSockets** for: sector interest subscriptions (client subscribes to sector X,Y → receives ship/planet delta updates), fleet event streams (combat damage, torpedo tracking, energy recharge), command acknowledgments (immediate "action queued" response + eventual "action resolved" push). |
 | **Auth** | **Firebase Authentication** | Sign in with Apple + Google. Unity client obtains Firebase ID token → sends to FastAPI `/auth/exchange` → receives short-lived JWT (1-hour TTL) + refresh token. FastAPI validates JWT via Firebase Admin SDK (caches public keys). Token refresh handled by Firebase SDK on device (no custom refresh endpoint). |
 | **Authoritative DB** | **PostgreSQL 15+** | Replaces Btrieve `.dat` files. Tables: `users` (account, cash, kills, planets, team affiliation), `ships` (position, heading, speed, damage, energy, cargo, shield/cloak status), `sectors` (type, wormholes, planet count), `planets` (owner, treasury, tax rate, production rates, item stocks, spies), `teams` (name, members, score), `mail` (async notifications: attack alerts, production reports, spy intel, killmails), `economy_ledgers` (transaction history for audit/economy balance). Schema normalized (3NF), indexed on hot paths (ship lookups by user, sector spatial queries, planet owner scans). |
@@ -409,7 +409,7 @@ This section documents how the chosen stack **replaces** BBS-era assumptions (ti
 
 ## 6. Client Integration (Unity)
 
-This section describes **design-level** integration between Unity 6000.0.10f1 (iOS/Android) and the FastAPI + WebSocket backend. **No C# code files** (out of scope per requirements). This is the **contract** Unity client devs will implement.
+This section describes **design-level** integration between Unity 6000.4.10f1 (iOS/Android) and the FastAPI + WebSocket backend. **No C# code files** (out of scope per requirements). This is the **contract** Unity client devs will implement.
 
 ### 6.1 Authentication Flow
 
