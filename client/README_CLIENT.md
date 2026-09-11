@@ -14,11 +14,12 @@ Unity Editor 6000.4.10f1 mobile client for iOS and Android.
 ```
 client/
 ├── Assets/               # Unity assets
-│   ├── Scenes/          # Scene files
-│   │   ├── Boot.unity          # Splash/loading
-│   │   ├── Login.unity         # Authentication
-│   │   ├── Onboarding.unity    # Tutorial
-│   │   └── Main.unity          # 4-tab main view
+│   ├── Scenes/Stub/     # Scene stub files (18 Must-level scenes per PR #6)
+│   │   ├── Boot/               # BOOT_001_Splash, AUTH_001_Login
+│   │   ├── Map/                # MAP_001–003 (Galaxy, Sector, LocalSpaceHUD)
+│   │   ├── Empire/             # EMPIRE_001_EmpireHome
+│   │   ├── Fleet/              # FLEET_001_ActiveShipCard
+│   │   └── Social/             # SOCIAL_001/002/006 (Alliance, Inbox, Leaderboard)
 │   ├── Scripts/         # C# gameplay scripts
 │   │   ├── Core/              # Framework (state, networking)
 │   │   ├── UI/                # UI controllers
@@ -28,15 +29,15 @@ client/
 │   │   │   └── Social/        # Social tab
 │   │   ├── Networking/        # WebSocket + REST client
 │   │   └── Game/              # Game logic
-│   ├── Prefabs/         # Reusable UI prefabs
-│   │   ├── HUD/              # Top bar, minimap, action button
-│   │   ├── Tabs/             # Tab content containers
-│   │   └── Modals/           # Sheets, dialogs, overlays
-│   └── Resources/       # Addressables catalog
+│   ├── Prefabs/UI/Stub/ # Reusable UI prefab stubs (12 Must-level prefabs)
+│   │   ├── Shared/           # HUD_Root, BottomNav, Minimap, SafeHarborChip, ActionStack
+│   │   ├── Map/              # TargetSheet, CombatRadial
+│   │   └── Overlays/         # Killmail, SafeHarborExplainer, ConfirmationDialog, LoadingSpinner, ErrorToast
+│   └── Resources/       # Addressables catalog (future)
 ├── ProjectSettings/     # Unity project settings
-│   ├── ProjectSettings.asset  # Build targets: iOS + Android
-│   ├── EditorBuildSettings.asset
-│   └── ...
+│   ├── ProjectSettings.asset  # Build targets: iOS + Android (TODO)
+│   ├── EditorBuildSettings.asset (TODO)
+│   └── ProjectVersion.txt     # Unity 6000.4.10f1
 └── Packages/           # Unity package manifest
     └── manifest.json   # Dependencies
 ```
@@ -99,8 +100,42 @@ Client obtains Firebase ID token → sends to FastAPI → receives game session 
 
 ## Development Status
 
-**Phase B Scaffold**: Project structure created, screens stubbed as TODO comments in scripts.
-Full Unity Editor generation requires macOS for complete ProjectSettings generation.
+**Phase B Scaffold - Asset Stubs Created** (per PR #6 `PHASE_B_UNITY_STUB_SCREEN_MAP.md`):
+
+### Must-Level Scenes (10 scenes) ✅
+- ✅ `BOOT_001_Splash.unity` - Splash screen placeholder
+- ✅ `AUTH_001_Login.unity` - Login screen placeholder
+- ✅ `MAP_001_GalaxyOverview.unity` - Galaxy grid placeholder
+- ✅ `MAP_002_SectorGrid.unity` - Sector view placeholder
+- ✅ `MAP_003_LocalSpaceHUD.unity` - **Primary scene** with HUD components
+- ✅ `EMPIRE_001_EmpireHome.unity` - Empire dashboard placeholder
+- ✅ `FLEET_001_ActiveShipCard.unity` - Fleet view placeholder
+- ✅ `SOCIAL_001_AllianceHub.unity` - Alliance hub placeholder
+- ✅ `SOCIAL_002_Inbox.unity` - Inbox placeholder
+- ✅ `SOCIAL_006_Leaderboard.unity` - Leaderboard placeholder
+
+### Must-Level Prefabs (12 prefabs) ✅
+**Shared HUD Components:**
+- ✅ `HUD_Root.prefab` - Top status strip container
+- ✅ `BottomNav_MapFleetEmpireSocial.prefab` - 4-tab bottom navigation
+- ✅ `Minimap.prefab` - Bottom-right sector minimap
+- ✅ `SafeHarborChip.prefab` - Top-right status indicator
+- ✅ `ActionStack.prefab` - Right-edge action buttons
+
+**Map Components:**
+- ✅ `TargetSheet.prefab` - Slide-up contact sheet
+- ✅ `CombatRadial.prefab` - Weapon selection radial
+
+**Overlay Components:**
+- ✅ `Killmail.prefab` - Death recap overlay
+- ✅ `SafeHarborExplainer.prefab` - Safe Harbor modal
+- ✅ `ConfirmationDialog.prefab` - Generic confirm/cancel modal
+- ✅ `LoadingSpinner.prefab` - Scene transition spinner
+- ✅ `ErrorToast.prefab` - Bottom error toast
+
+**Note:** All assets are minimal Unity YAML stubs. Open in Unity 6000.4.10f1 Editor to add UI components, scripts, and visual design.
+
+Full Unity Editor generation requires macOS for complete ProjectSettings configuration.
 
 ## Next Steps
 
