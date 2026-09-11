@@ -12,6 +12,8 @@
 
 **This Screen Inventory implements the Designer's Mobile UX Contract (Game Design §9)** and extends the UX Vision with detailed per-screen specifications. Navigation follows the locked 4-tab structure (**Map**, **Fleet**, **Empire**, **Social** per §9.1), HUD elements match §9.1 exactly, and push triggers implement §9.3.
 
+**Monetization (LOCKED by Empire Lead/Jeremy):** F2P + cosmetics only, **NO P2W**. Screens include cosmetic shop/skins entry points (Social tab or dedicated button) but ZERO UI for production speedups, combat-power boosts, energy refills, or any gameplay-advantage IAP. Ship skins, planet themes, flags, VFX, emotes only — purely visual.
+
 This document provides a **comprehensive inventory of every screen** in the Galactic Empire mobile client, including:
 - Screen ID, name, navigation path
 - Primary user goal

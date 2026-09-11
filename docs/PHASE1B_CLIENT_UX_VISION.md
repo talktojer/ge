@@ -33,7 +33,7 @@ Galactic Empire Mobile transforms a 1988 BBS text-command space conquest game in
 - **Onboarding flow**: 90-second interactive tutorial (§9.4 anti-pattern: avoid >3min forced tutorial)
 - **Offline protection**: Safe Harbor docking (invulnerable at NPC citadels, costs rent) + optional NPC planet defenders (§8.2)
 - **Death penalty**: Insurance system (§8.6) — pay premium to recover 75% cargo, uninsured loses 50%
-- **Monetization**: F2P + cosmetics only, no P2W (§8.4 locked by Jeremy)
+- **Monetization**: F2P + cosmetics only, NO P2W (§8.4 LOCKED by Empire Lead/Jeremy) — cosmetic shop/skins entry points only, zero production speedups or combat-power IAP
 
 ---
 
@@ -1025,10 +1025,11 @@ This design assumes the following backend capabilities (Stack Architect to valid
    - **UX Impact:** Onboarding explains "PvP sandbox with PvE variety" (not safe PvE endgame)
    - **UX Requirements:** PvE sector markers on map (alien hive icons), co-op mission UI, loot tied to PvP trade economy
 
-6. **Monetization (Game Design §8.4 — LOCKED: B F2P cosmetics, Jeremy confirmed)**
-   - **Decision:** F2P + cosmetics only (ship skins, planet themes, flags, VFX), no P2W production speedups
+6. **Monetization (Game Design §8.4 — LOCKED: B F2P cosmetics, Empire Lead/Jeremy CONFIRMED)**
+   - **Decision:** F2P + cosmetics only (ship skins, planet themes, flags, VFX), **NO P2W** production speedups or combat-power IAP
    - **UX Impact:** Cosmetic shop UI (Social tab or dedicated shop button), battle pass (free + premium tracks), seasonal rotations
-   - **UX Red Line:** NEVER show "2x production boost" or "+20% weapon damage" monetization
+   - **UX Red Line:** NEVER implement UI for "2x production boost", "+20% weapon damage", energy refills, cargo expansions, or any gameplay-power monetization
+   - **Allowed:** Ship skins, planet skylines, empire flags, weapon VFX, warp effects, emotes, HUD themes — purely visual, zero gameplay advantage
 
 7. **Hybrid Strategic Realtime (Game Design §8.7 — LOCKED: A)**
    - **Decision:** Commands instant (tap → <100ms feedback), world resolves at strategic cadence (6s combat, 55s production)
