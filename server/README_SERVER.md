@@ -1,0 +1,246 @@
+# Galactic Empire - Backend Server
+
+FastAPI + ge-sim asyncio backend for mobile MMO.
+
+## Architecture
+
+Per `docs/PHASE1B_STACK_ADR.md`:
+- **FastAPI**: REST endpoints + WebSocket for real-time updates
+- **ge-sim**: Asyncio world simulation service (6s ship tick, 55s planet tick)
+- **PostgreSQL**: Authoritative persistent state
+- **Redis**: Hot state, pubsub, presence, sector subscriptions
+- **Firebase Auth**: Mobile authentication (Sign in with Apple/Google)
+
+## Directory Structure
+
+```
+server/
+├── api/                    # FastAPI application
+│   ├── main.py            # FastAPI app entry point
+│   ├── routes/            # REST + WebSocket endpoints
+│   │   ├── auth.py        # POST /auth/exchange (Firebase JWT -> session token)
+│   │   ├── player.py      # GET /player/profile, /player/ships, /player/planets
+│   │   ├── commands.py    # POST /commands/move, /commands/fire, /commands/claim
+│   │   ├── sector.py      # GET /sector/{x}/{y}
+│   │   ├── trade.py       # POST /trade/buy, /trade/sell
+│   │   └── websocket.py   # WebSocket /ws (sector subscriptions, real-time updates)
+│   ├── models/            # Pydantic models
+│   │   ├── player.py      # Player, Ship, Planet
+│   │   ├── sector.py      # Sector, Contact
+│   │   └── command.py     # MoveCommand, FireCommand, ClaimCommand
+│   ├── middleware/        # Auth, CORS, rate limiting
+│   │   └── auth.py        # JWT validation, Firebase Admin SDK
+│   └── services/          # Business logic
+│       ├── auth_service.py      # Token exchange, session management
+│       ├── player_service.py    # Player data queries
+│       └── command_service.py   # Command validation, queue to ge-sim
+│
+├── ge_sim/                # World simulation service
+│   ├── sim_engine.py      # Main asyncio simulation loop
+│   ├── ship_tick.py       # 6s tick: ship movement, combat, shields, energy
+│   ├── planet_tick.py     # 55s tick: production, taxes, spies, population
+│   ├── combat_resolver.py # Damage calculations, torpedo tracking
+│   └── event_publisher.py # Publish deltas to Redis for WebSocket fan-out
+│
+├── database/              # Database schema + migrations
+│   ├── models.py          # SQLAlchemy models (users, ships, planets, sectors, teams)
+│   ├── connection.py      # Async Postgres connection pool (asyncpg)
+│   └── migrations/        # Alembic migrations (future)
+│
+├── tests/                 # Pytest tests
+│   ├── test_api.py
+│   ├── test_ge_sim.py
+│   └── test_combat.py
+│
+├── requirements.txt       # Python dependencies
+├── Dockerfile.api         # API container image
+├── Dockerfile.ge-sim      # ge-sim container image
+└── README_SERVER.md       # This file
+```
+
+## Installation
+
+```bash
+# Install Python 3.11+
+python3.11 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set up environment variables (see .env.example)
+cp .env.example .env
+# Edit .env with your Firebase credentials, Postgres URL, Redis URL
+```
+
+## Running Locally
+
+### Option 1: Docker Compose (recommended)
+
+```bash
+# From workspace root
+docker-compose -f docker-compose.dev.yml up
+
+# API available at http://localhost:8000
+# ge-sim runs in background
+# Postgres on localhost:5432
+# Redis on localhost:6379
+```
+
+### Option 2: Manual
+
+```bash
+# Terminal 1: Start Postgres + Redis
+docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=dev postgres:15
+docker run -d -p 6379:6379 redis:7
+
+# Terminal 2: Run API
+cd server
+uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+
+# Terminal 3: Run ge-sim
+cd server
+python -m ge_sim.sim_engine
+```
+
+## API Endpoints
+
+### Authentication
+- `POST /auth/exchange` - Exchange Firebase JWT for session token
+
+### Player
+- `GET /player/profile` - Get player profile
+- `GET /player/ships` - List player ships
+- `GET /player/planets` - List player planets
+
+### Commands (require auth)
+- `POST /commands/move` - Move ship to sector
+- `POST /commands/fire` - Fire weapons at target
+- `POST /commands/claim` - Claim planet
+
+### Sector
+- `GET /sector/{x}/{y}` - Get sector data (planets, ships, contacts)
+
+### Trade
+- `POST /trade/buy` - Buy items at docked planet
+- `POST /trade/sell` - Sell cargo at docked planet
+
+### WebSocket
+- `WS /ws` - Real-time updates
+  - Subscribe: `{"type": "subscribe", "sector": {"x": 5, "y": 7}}`
+  - Unsubscribe: `{"type": "unsubscribe", "sector": {"x": 5, "y": 7}}`
+  - Events: `ship_moved`, `combat_damage`, `planet_production_complete`
+
+## ge-sim Simulation Engine
+
+### 6-Second Ship Tick
+
+Processes all active ships:
+- Apply movement physics (position += velocity * 6s)
+- Resolve combat damage (phasor/torpedo hits)
+- Recharge shields, energy (per ship stats)
+- Track torpedo/missile positions
+- Check mine proximity
+- Kill ships at 100% damage
+- Publish ship deltas to Redis
+
+### 55-Second Planet Tick
+
+Processes all owned planets:
+- Run production multipliers (Men, Fighters, Gold, Food per rates)
+- Collect taxes from population
+- Check spy discovery/intel
+- Update population growth
+- Send push notifications (production ready, stockpile full)
+- Publish planet deltas to Redis
+
+### Event Publishing
+
+ge-sim writes to Redis pubsub:
+- `sector:{x}:{y}:ship_moved` - Ship position update
+- `sector:{x}:{y}:combat_damage` - Damage dealt
+- `planet:{id}:production_ready` - Production cycle complete
+
+API WebSocket handlers subscribe to Redis channels and fan-out to connected clients.
+
+## Database Schema
+
+### Tables (simplified)
+- `users` - account, cash, kills, planets_owned, team_id
+- `ships` - owner_id, position_x, position_y, heading, speed, damage, energy, cargo
+- `sectors` - x, y, type, wormhole_target_id, planet_count
+- `planets` - sector_id, owner_id, treasury, tax_rate, production_rates, item_stocks
+- `teams` - name, members, score
+- `mail` - recipient_id, type (attack/production/spy), content, read_at
+
+## Firebase Auth Integration
+
+1. Unity client: User signs in with Apple/Google → obtains Firebase ID token
+2. Client: POST /auth/exchange with Firebase token
+3. Backend: Validates token with Firebase Admin SDK
+4. Backend: Creates/updates user in Postgres, generates session JWT (1-hour TTL)
+5. Client: Uses session JWT for all API calls
+6. Client: Firebase SDK auto-refreshes ID token (no custom refresh endpoint needed)
+
+## Environment Variables
+
+See `.env.example`:
+- `FIREBASE_PROJECT_ID` - Firebase project ID
+- `FIREBASE_CREDENTIALS_JSON` - Firebase service account JSON (base64 or path)
+- `DATABASE_URL` - PostgreSQL connection string
+- `REDIS_URL` - Redis connection string
+- `JWT_SECRET` - Secret key for session JWT signing
+- `ENVIRONMENT` - dev/staging/production
+
+## Development Status
+
+**Phase B Scaffold**: Directory structure + stub files with TODO comments.
+No implementation code yet. See inline TODOs in each file for next steps.
+
+## Combat Pacing
+
+~6 second strategic tick (not twitch):
+- Commands queued instantly (optimistic client response)
+- Server resolves on next tick boundary
+- Encourages strategic positioning, coordination over APM spam
+
+## Offline Protection
+
+Per `PHASE1B_GAME_DESIGN.md` §8.2:
+- Safe Harbor: Dock at NPC citadel (invulnerable, costs rent)
+- Insurance: Pay premium to recover 75% cargo on death
+- Push notifications: Alert player of attacks while offline
+
+## Monetization
+
+**F2P + Cosmetics ONLY** (LOCKED by Empire Lead):
+- Ship skins, planet themes, flags, VFX, emotes
+- **NO P2W**: Zero production speedups, combat power, energy refills
+- Cosmetic shop endpoints (future Phase 2+)
+
+## Testing
+
+```bash
+# Run tests
+pytest tests/
+
+# Run specific test file
+pytest tests/test_api.py -v
+
+# Coverage
+pytest --cov=api --cov=ge_sim tests/
+```
+
+## Deployment
+
+See `PHASE1B_STACK_ADR.md` §2 for Fly.io deployment:
+- `flyctl deploy --config fly.api.toml` - Deploy API
+- `flyctl deploy --config fly.ge-sim.toml` - Deploy ge-sim
+- Postgres: Neon or Supabase managed Postgres
+- Redis: Upstash Redis
+
+## Resources
+
+- Stack ADR: `../docs/PHASE1B_STACK_ADR.md`
+- Game Design: `../docs/PHASE1B_GAME_DESIGN.md`
+- UX Vision: `../docs/PHASE1B_CLIENT_UX_VISION.md`
