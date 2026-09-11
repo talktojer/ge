@@ -75,7 +75,7 @@ The Unity client is configured to use the production API at **`https://ge.jerswe
 
 **Configuration File:** `Assets/Scripts/Networking/NetworkConfig.cs`
 - **REST API Base URL:** `https://ge.jersweb.net` (no trailing slash)
-- **WebSocket URL:** `wss://ge.jersweb.net`
+- **WebSocket URL:** `wss://ge.jersweb.net/ws` (mounted at `/ws` per ADR)
 
 Both `APIClient` and `WebSocketClient` default to these production URLs when instantiated:
 ```csharp
@@ -85,6 +85,7 @@ var wsClient = new WebSocketClient();
 
 // Override for testing (optional)
 var testApiClient = new APIClient("http://localhost:8000");
+var testWsClient = new WebSocketClient("ws://localhost:8000/ws");
 ```
 
 To verify the configuration in Unity Editor, check the Console on startup for NetworkConfig log messages.

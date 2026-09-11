@@ -16,9 +16,9 @@ namespace GalacticEmpire.Networking
 
         /// <summary>
         /// WebSocket endpoint URL for real-time updates
-        /// Uses secure WebSocket protocol (wss://)
+        /// Uses secure WebSocket protocol (wss://) mounted at /ws per ADR
         /// </summary>
-        public const string WEBSOCKET_URL = "wss://ge.jersweb.net";
+        public const string WEBSOCKET_URL = "wss://ge.jersweb.net/ws";
 
         /// <summary>
         /// Returns the full REST API base URL
