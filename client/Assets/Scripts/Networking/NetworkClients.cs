@@ -13,9 +13,9 @@ namespace GalacticEmpire.Networking
         private string baseUrl;
         private string authToken;
 
-        public APIClient(string url)
+        public APIClient(string url = null)
         {
-            baseUrl = url;
+            baseUrl = url ?? NetworkConfig.GetApiUrl();
         }
 
         public void SetAuthToken(string token)
@@ -49,9 +49,9 @@ namespace GalacticEmpire.Networking
         public event Action<string> OnCombatEvent;
         public event Action<string> OnProductionComplete;
 
-        public WebSocketClient(string url)
+        public WebSocketClient(string url = null)
         {
-            wsUrl = url;
+            wsUrl = url ?? NetworkConfig.GetWebSocketUrl();
         }
 
         public async Task Connect(string authToken)

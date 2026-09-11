@@ -69,6 +69,26 @@ client/
 - **WebSocket**: Real-time sector updates, combat events, push notifications
 - **Offline Support**: Queue commands locally, sync on reconnect
 
+#### API Configuration
+
+The Unity client is configured to use the production API at **`https://ge.jersweb.net`**
+
+**Configuration File:** `Assets/Scripts/Networking/NetworkConfig.cs`
+- **REST API Base URL:** `https://ge.jersweb.net` (no trailing slash)
+- **WebSocket URL:** `wss://ge.jersweb.net`
+
+Both `APIClient` and `WebSocketClient` default to these production URLs when instantiated:
+```csharp
+// Uses production URL from NetworkConfig
+var apiClient = new APIClient();
+var wsClient = new WebSocketClient();
+
+// Override for testing (optional)
+var testApiClient = new APIClient("http://localhost:8000");
+```
+
+To verify the configuration in Unity Editor, check the Console on startup for NetworkConfig log messages.
+
 ## Combat Pacing
 
 ~6 second strategic tick (not twitch):
