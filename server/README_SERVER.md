@@ -21,38 +21,26 @@ server/
 │   │   ├── auth.py        # POST /auth/exchange (Firebase JWT -> session token)
 │   │   ├── player.py      # GET /player/profile, /player/ships, /player/planets
 │   │   ├── commands.py    # POST /commands/move, /commands/fire, /commands/claim
-│   │   ├── sector.py      # GET /sector/{x}/{y}
-│   │   ├── trade.py       # POST /trade/buy, /trade/sell
 │   │   └── websocket.py   # WebSocket /ws (sector subscriptions, real-time updates)
-│   ├── models/            # Pydantic models
-│   │   ├── player.py      # Player, Ship, Planet
-│   │   ├── sector.py      # Sector, Contact
-│   │   └── command.py     # MoveCommand, FireCommand, ClaimCommand
-│   ├── middleware/        # Auth, CORS, rate limiting
-│   │   └── auth.py        # JWT validation, Firebase Admin SDK
-│   └── services/          # Business logic
-│       ├── auth_service.py      # Token exchange, session management
-│       ├── player_service.py    # Player data queries
-│       └── command_service.py   # Command validation, queue to ge-sim
+│   ├── models/            # Pydantic models (TODO)
+│   ├── middleware/        # Auth, CORS, rate limiting (TODO)
+│   └── services/          # Business logic (TODO)
 │
 ├── ge_sim/                # World simulation service
+│   ├── __main__.py        # Entry point for python -m ge_sim
 │   ├── sim_engine.py      # Main asyncio simulation loop
 │   ├── ship_tick.py       # 6s tick: ship movement, combat, shields, energy
 │   ├── planet_tick.py     # 55s tick: production, taxes, spies, population
-│   ├── combat_resolver.py # Damage calculations, torpedo tracking
 │   └── event_publisher.py # Publish deltas to Redis for WebSocket fan-out
 │
-├── database/              # Database schema + migrations
-│   ├── models.py          # SQLAlchemy models (users, ships, planets, sectors, teams)
-│   ├── connection.py      # Async Postgres connection pool (asyncpg)
-│   └── migrations/        # Alembic migrations (future)
+├── database/              # Database schema
+│   └── models.py          # SQLAlchemy models (users, ships, planets, sectors, teams)
 │
-├── tests/                 # Pytest tests
-│   ├── test_api.py
-│   ├── test_ge_sim.py
-│   └── test_combat.py
+├── tests/                 # Pytest tests (stubs)
+│   └── test_api.py        # API tests (TODO)
 │
 ├── requirements.txt       # Python dependencies
+├── .env.example           # Environment variable template (NO secrets)
 ├── Dockerfile.api         # API container image
 ├── Dockerfile.ge-sim      # ge-sim container image
 └── README_SERVER.md       # This file
@@ -100,7 +88,7 @@ uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 
 # Terminal 3: Run ge-sim
 cd server
-python -m ge_sim.sim_engine
+python -m ge_sim
 ```
 
 ## API Endpoints

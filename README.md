@@ -8,7 +8,7 @@ A modern mobile reimagination of the classic Galactic Empire BBS door game, targ
 
 ### Core Experience
 - **Mobile-First**: Native iOS/Android client built with Unity Editor 6000.4.10f1
-- **Real-Time MMO**: Persistent 6-second tick system with 55-second orbital round-trip delay
+- **Real-Time MMO**: Persistent 6-second ship tick with 55-second planet production cycles
 - **Strategic Depth**: Space exploration, planetary conquest, economic empire building, tactical combat
 - **Social**: Team alliances, diplomatic gameplay, in-game communications
 - **Fair Play**: F2P with cosmetic monetization only - no pay-to-win
@@ -21,7 +21,7 @@ A modern mobile reimagination of the classic Galactic Empire BBS door game, targ
 
 ### Backend
 - **FastAPI**: Python asyncio-based game server
-- **ge-sim**: Asyncio simulation engine (6s tick / 55s orbital mechanics)
+- **ge-sim**: Asyncio simulation engine (6s ship tick / 55s planet production tick)
 - **PostgreSQL**: Persistent game state
 - **Redis**: Session management and real-time state caching
 

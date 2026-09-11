@@ -74,11 +74,14 @@ async def health():
         "ge_sim": "TODO"
     }
 
-# TODO: Include routers
-# from api.routes import auth, player, commands, sector, trade, websocket
-# app.include_router(auth.router, prefix="/auth", tags=["auth"])
-# app.include_router(player.router, prefix="/player", tags=["player"])
-# app.include_router(commands.router, prefix="/commands", tags=["commands"])
+# Include routers
+from api.routes import auth, player, commands, websocket
+
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(player.router, prefix="/player", tags=["player"])
+app.include_router(commands.router, prefix="/commands", tags=["commands"])
+app.include_router(websocket.router, prefix="/ws", tags=["websocket"])
+
+# TODO: Add sector and trade routers when implemented
 # app.include_router(sector.router, prefix="/sector", tags=["sector"])
 # app.include_router(trade.router, prefix="/trade", tags=["trade"])
-# app.include_router(websocket.router, prefix="/ws", tags=["websocket"])

@@ -19,7 +19,6 @@ python-multipart==0.0.12
 
 # WebSockets
 websockets==13.1
-python-socketio==5.11.4
 
 # Testing
 pytest==8.3.3
