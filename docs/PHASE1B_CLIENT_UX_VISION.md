@@ -1,7 +1,7 @@
 # Phase 1b: Mobile Client UX Vision – Galactic Empire
 
 **Date:** 2026-09-11  
-**Source:** Phase 1a Legacy System Map + UX Product Requirements  
+**Source of Truth:** `docs/PHASE1B_GAME_DESIGN.md` (PR #2, Designer-locked systems) + `docs/PHASE1A_LEGACY_SYSTEM_MAP.md` (PR #1, legacy analysis)  
 **Target Platform:** iOS + Android (Unity Editor 6000.4.10f1)  
 **Scope:** Design documentation only; no implementation.
 
@@ -9,9 +9,9 @@
 
 ## Executive Summary
 
-Galactic Empire Mobile transforms a 1988 BBS text-command space conquest game into a **modern mobile-first MMO RPG** while preserving its strategic fleet/conquest depth. Players command ships through a shared persistent galaxy, claim and manage planets, engage in tactical combat, and build alliances — all from a phone.
+Galactic Empire Mobile transforms a 1988 BBS text-command space conquest game into a **modern mobile-first strategic MMO** while preserving its tactical fleet/conquest depth. Players command ships through a sharded persistent galaxy (~100×50 sectors, 500-1k players/shard), claim and manage planets, engage in strategic combat (~6s resolution), and build alliances — all from a phone.
 
-**North Star:** "You are an emperor on a phone" — thumb-first, glanceable empire status, deep strategy without BBS friction.
+**North Star (Aligned with Game Design §2.2):** "Command an empire, not a joystick" — thumb-first, glanceable territory management, strategic depth without BBS friction or twitch reflex requirements.
 
 **Core Fantasy:** Year 3250. You pilot a starship through uncharted space, claiming planets, building production empires, upgrading fleets, and crushing rivals in strategic combat. Your empire persists 24/7 in a shared galaxy with thousands of players.
 
@@ -24,14 +24,32 @@ Galactic Empire Mobile transforms a 1988 BBS text-command space conquest game in
 
 **Primary UX Transformation:** Replace BBS 3-letter text commands (`imp`, `pha`, `buy`) with contextual touch UI (tap ship → radial menu; swipe to navigate; drag to aim). Preserve strategic timing (6s combat cadence feels tactical, not twitch) but make actions feel instant via optimistic UI updates and smooth client-side interpolation between server ticks.
 
-**Key Design Decisions:**
-- **Bottom tab navigation** (4-5 tabs): Galaxy, Empire, Fleet, Intel, Social
-- **HUD design** for local space: Top status strip (cash, energy, shields, danger state), center canvas (ship + contacts), right edge (contextual action stack), bottom (target card)
-- **Map zoom hierarchy**: Galaxy overview → Sector grid → Local space tactical view
-- **Onboarding flow**: 15-minute guided loop in safe tutorial sector (scan → claim planet → produce → trade → first combat → Safe Harbor)
-- **Combat presentation**: Tap target → radial weapon selector → damage numbers + shield FX → killmail on death
-- **Empire management**: Planet list with attention queue ("needs food"), detail screens with production rate controls and ETA progress bars
-- **Offline policy recommendation**: Safe Harbor (dock before logout or retreat to citadel); surface risk if undocked
+**Key Design Decisions (Aligned with Game Design §8 & §9):**
+- **Bottom tab navigation** (4 tabs per §9.1 Mobile UX Contract): **Map**, **Fleet**, **Empire**, **Social**
+- **HUD design** for local space (§9.1): Top bar (cash, energy, ship, alliance), center contextual action button, minimap (10% bottom-right), bottom nav bar
+- **Universe**: Instanced shards (~100×50 sectors, 5000 total, 500-1k players/shard per §8.1)
+- **Combat pacing**: ~6-second strategic tick (§8.3) — instant UI input, deliberate server resolution, time to coordinate
+- **Production cycles**: 55-second tick (§6.2) — masked with progress bars and push notifications
+- **Onboarding flow**: 90-second interactive tutorial (§9.4 anti-pattern: avoid >3min forced tutorial)
+- **Offline protection**: Safe Harbor docking (invulnerable at NPC citadels, costs rent) + optional NPC planet defenders (§8.2)
+- **Death penalty**: Insurance system (§8.6) — pay premium to recover 75% cargo, uninsured loses 50%
+- **Monetization**: F2P + cosmetics only, no P2W (§8.4 locked by Jeremy)
+
+---
+
+## Document Alignment & Authority
+
+**This UX Vision aligns with and extends `docs/PHASE1B_GAME_DESIGN.md` (PR #2, Designer-led systems design).** All product decisions (universe shards, offline protection, combat pacing, monetization, PvE/PvP balance, death penalty, identity) are **locked** per Game Design §8. This document translates those decisions into mobile UX patterns, screen flows, and interaction design.
+
+**Mobile UX Contract (Game Design §9):** This vision implements the Designer's mandatory HUD elements, deep screen requirements, push triggers, and anti-patterns. Where the Game Design doc specifies "must-haves" (e.g., 4-tab nav, specific HUD layout), this document matches exactly. Where the Game Design doc delegates to Client UX (e.g., wireframe details, animation budgets, visual style), this document proposes solutions.
+
+**Hierarchy of Authority:**
+1. **Game Design §8 (locked product decisions)** — immutable for Phase 1b
+2. **Game Design §9 (Mobile UX Contract)** — Client UX must implement as specified
+3. **This UX Vision (screen flows, interactions, wireframes)** — extends Game Design with mobile-specific detail
+4. **Phase 1a Legacy System Map (PR #1)** — referenced for mechanics grounding (14 item types, 6s/55s ticks, combat formulas, etc.)
+
+**Conflict Resolution:** If this document contradicts Game Design §8 or §9, Game Design wins. Flag contradictions to Designer for resolution.
 
 ---
 
@@ -39,17 +57,16 @@ Galactic Empire Mobile transforms a 1988 BBS text-command space conquest game in
 
 ### 1.1 Primary Navigation (Bottom Tab Bar)
 
-**Design Rationale:** Mobile best practice — persistent bottom nav within thumb zone, max 5 tabs. Each tab represents a major play surface, not nested submenus.
+**Design Rationale (Per Game Design §9.1 Mobile UX Contract):** 4-tab bottom nav within thumb zone. Each tab represents a major play surface, not nested submenus. Matches Designer spec exactly.
 
 | Tab | Icon | Primary Goal | Entry State |
 |-----|------|--------------|-------------|
-| **Galaxy** | 🌌 Map | Navigate space, find targets, travel | Opens to last zoom level (Galaxy/Sector/Local); defaults to Local space if mid-session, Galaxy if fresh login |
-| **Empire** | 👑 Crown | Manage planets, review production, collect wealth | Opens to Empire Home (overview); attention queue at top (planets needing action) |
-| **Fleet** | 🚀 Ship | Review ships, loadouts, hangar, travel orders | Opens to active ship card; swipe for ship list if player owns multiple |
-| **Intel** | 📡 Radar | Read messages, alerts, spy reports, killmails, threats | Opens to unread inbox; badge shows unread count |
-| **Social** | 👥 Team | Team/alliance hub, sector chat, leaderboard, settings | Opens to team home if in alliance, otherwise leaderboard |
+| **Map** | 🌌 Galaxy | Navigate space, claim planets, wormholes, sector exploration | Opens to last zoom level (Galaxy/Sector/Local); defaults to Local space if mid-session, galaxy overview if fresh login |
+| **Fleet** | 🚀 Ship | Ship roster, loadout, travel, combat history | Opens to active ship card; swipe for ship list if player owns multiple (up to 10 ships per Game Design §4.1) |
+| **Empire** | 👑 Crown | Planet list, production dashboard, trade routes, treasury | Opens to Empire Home with attention queue (planets needing action: under attack, production maxed, food shortage) |
+| **Social** | 👥 Team | Alliance chat, inbox (notifications history), leaderboard | Opens to alliance tab if in alliance, otherwise leaderboard; includes settings via top-right gear icon |
 
-**Overflow Menu (☰ or avatar chip):** Settings, legal/account, help, feedback, logout
+**Overflow Access (Top Bar):** Settings gear icon (top-right of HUD per §9.1), contextual menus (long-press, swipe actions)
 
 **Global Overlays (not tabs):**
 - **Command Sheet** — Contextual action modal (e.g., tap enemy ship → shows Attack/Scan/Lock/Retreat options)
@@ -708,75 +725,62 @@ Root
 
 ## 3. HUD Design (Local Space Tactical View)
 
-**Platform:** iOS + Android, safe areas respected (notch, Dynamic Island, home indicator)
+**Implements Game Design §9.1 Mobile UX Contract exactly.** Platform: iOS + Android, safe areas respected (notch, Dynamic Island, home indicator).
 
-### 3.1 Layout (Landscape or Portrait)
+### 3.1 Layout (Portrait Mode Primary per §9.1)
 
-**Primary Mode: Portrait** (most mobile MMO players hold phone vertically for casual play)
-- Galaxy/Empire/Fleet tabs benefit from scrolling vertical content
-- Combat in portrait: One-handed thumb reach for Fire/Retreat
-
-**Optional Landscape Mode** (activated in Settings or auto-rotate):
-- Preferred for deep combat sessions (wider FOV, dedicated action panel on right third of screen)
-- Map navigation benefits from horizontal aspect ratio (see more sectors at once)
-
-**HUD Layout (Portrait Mode):**
+**Portrait Mode (Default, One-Handed Use per §9.1):**
 
 ```
 ┌─────────────────────────────────────┐
-│ ⚡Cash  🔋Energy 🛡Shield  💔Damage │  ← Top Status Strip (glanceable)
-│ 🟢 Safe / 🔴 In Danger (chip, right)│
+│ ⚡₡1.2M 🔋85% [Ship]🚀 [🛡Alliance] ⚙️│  ← Top Bar (§9.1)
 ├─────────────────────────────────────┤
 │                                     │
-│          🚀 (Player Ship)           │  ← Center Canvas (3D view)
 │                                     │
-│     👾 (Enemy Ship, tappable)       │
+│    [ Large Contextual Button ]      │  ← Center: Contextual Action
+│      (Scan Sector / Fire / Manage)  │     (§9.1: thumb-reachable)
 │                                     │
-│  [Minimap]                          │  ← Bottom-left: Sector pip
-│   📍                                │
+│                                     │
+│                            [Minimap]│  ← 10% screen, bottom-right (§9.1)
+│                              📍 🟢🔴│
 ├─────────────────────────────────────┤
-│ ┌───────────────────────────────┐   │
-│ │ Target: [Enemy Name]          │   │  ← Bottom Sheet: Selected Target Card
-│ │ Class: Cruiser | Range: 4.2k │   │
-│ │ [Scan] [Fire] [Retreat]       │   │
-│ └───────────────────────────────┘   │
+│ [Map] [Fleet] [Empire] [Social]     │  ← Bottom Nav (§9.1: 4 icons)
 └─────────────────────────────────────┘
-   [Galaxy] [Empire] [Fleet] [Intel] [Social]  ← Bottom Tab Bar
 ```
+
+**Landscape Mode (Optional, Tactical Combat View per §9.1):**
+- Full-screen sector view (3D or stylized 2D)
+- Weapon radial menu (right side): Phasor, Torpedo, Missile, Shields, Cloak
+- Target list (left side): Enemy ships in sector, tap to lock
+- Combat log (bottom ticker): "You fired Phasor → 12k damage to [Enemy]. Enemy shields down!"
 
 **HUD Components Detail:**
 
-### 3.2 Top Status Strip (Always Visible, Across All Tabs)
+### 3.2 Top Bar (Game Design §9.1 Specification)
 
-**Design:** Horizontal bar, 44pt height (iOS standard touch target), semi-transparent dark background (80% opacity) to overlay map/content.
+**Elements (left to right, per §9.1):**
+1. **Cash balance** (gold icon + number):
+   - Display: "₡1.2M" (abbreviated: k for thousands, M for millions)
+   - Source: Player liquid wealth (Phase 1a `WARUSR.cash`)
+   - Tap: Shows networth breakdown tooltip (cash + planet value + fleet value)
+2. **Fleet energy** (lightning icon + %):
+   - Display: "85%" (bar graph optional: blue → yellow → red)
+   - Source: Active ship energy (Phase 1a `WARSHP.energy` 0-65000, normalized to %)
+   - Color: Green >50%, yellow 20-50%, red <20%
+   - Recharges 1%/min idle per Game Design §6.3
+3. **Active ship thumbnail** (tap to switch ships):
+   - Shows current ship class icon (frigate/cruiser/dreadnought silhouette)
+   - Tap: Opens Fleet screen (ship roster), quick-switch if multiple ships owned (up to 10 per §4.1)
+4. **Alliance badge** (tap to open alliance screen):
+   - Shows alliance emblem/flag if in alliance
+   - Empty if solo player
+   - Tap: Opens Social tab → Alliance sub-tab
+5. **Settings gear icon** (right-most):
+   - Tap: Opens Settings screen (nested in Social tab per §9.1)
 
-**Elements (left to right):**
-1. **Cash** (currency icon + value):
-   - Icon: ₡ (galactic credit symbol)
-   - Value: "245,000" (abbreviated: "245k" if >1M)
-   - Tap to expand: Tooltip shows "Total networth: ₡2.4M" (Phase 1a `waruptr->score`)
-2. **Energy** (flux pod charge, Phase 1a `energy` 0-65000):
-   - Icon: ⚡ lightning bolt
-   - Bar graph (horizontal, 20pt wide, color: blue → yellow → red as depletes)
-   - Value: "42,000 / 65,000" (shortened: "42k" on small screens)
-   - Tooltip: "Energy recharges at +500/tick" (Phase 1a `recharge()` mechanic)
-3. **Shield %** (Phase 1a `shield` / `max_shield`):
-   - Icon: 🛡 shield
-   - Value: "85%" (color: green >50%, yellow 20-50%, red <20%)
-   - Shield status indicator: Up (glowing) / Down (gray) / Damaged (red X)
-4. **Damage %** (Phase 1a `damage` 0-100%):
-   - Icon: 💔 broken heart or 🔧 wrench
-   - Value: "12%" (color: green <25%, yellow 25-75%, red >75%)
-   - Explodes at 100% (triggers death)
-5. **Cloak State** (if equipped, Phase 1a `cloak`):
-   - Icon: 👁 eye (open=visible, closed=cloaked)
-   - Value: "Active" or cooldown timer "42s" (Phase 1a `cloak > 0` ticks)
-6. **Safe Harbor / In Danger Badge** (right-aligned):
-   - Chip button (pill shape, 60pt wide):
-     - Green "Safe" (docked or in citadel)
-     - Red "In Danger" (open space, pulsing animation)
-     - Blue "Docked" (at planet, anchor icon)
-   - Tap to expand: Safe Harbor explainer modal + "Emergency Retreat" button (costs energy, instant dock at nearest owned planet)
+**NOT Included per §9.1** (moved to in-world context or deep screens):
+- Shield % / Damage % (shown in combat HUD when engaged, not global top bar)
+- Safe Harbor status (shown as minimap badge or contextual alert, not persistent top bar element per Designer spec)
 
 **Accessibility:**
 - VoiceOver: "Cash: 245 thousand. Energy: 42 thousand of 65 thousand. Shields: 85 percent, up. Damage: 12 percent. Safe."
@@ -992,65 +996,50 @@ This design assumes the following backend capabilities (Stack Architect to valid
 - **Physics server:** Phase 1a `moveship()` math done in FastAPI (Python slow for real-time) or separate game server (Rust/Go)?
 - **Universe size decision:** Keep 30×15 sectors (450 total, small) or expand to 100×50 (5000, Phase 1a §9.1 Option B)? Affects map tile streaming strategy.
 
-### 4.3 Open UX Assumptions Awaiting Product Decisions
+### 4.3 Locked Product Decisions (Game Design §8)
 
-**Flag for Jeremy / Product Lead / Designer:**
+**Status: All 7 Phase 1a decisions are now LOCKED per Game Design doc. Monetization locked by Jeremy; remaining six locked by Designer with Empire Lead approval.**
 
-1. **Universe Size (Phase 1a §9.1):**
-   - **UX Impact:** If 30×15 sectors kept → crowded, fast land rush, intimate PvP meta
-   - **UX Impact:** If expanded to 100×50 → need robust search/bookmark system (can't pan entire map on mobile), potentially feels empty at launch with few players
-   - **Recommendation:** Start 30×15 for MVP (simple), expand post-launch if retention good (procedural generation, Phase 1a §9.1 Option C)
+1. **Universe Size (Game Design §8.1 — LOCKED: D+B)**
+   - **Decision:** Instanced shards (~100×50 sectors, 5000 total), target 500-1k players/shard
+   - **UX Impact:** Need robust search/bookmark (can't pan 5000 sectors on mobile), shard identity UI (show "Galaxy Andromeda"), cross-shard portal events (prestige competition)
+   - **UX Requirements:** Galaxy map virtualization (render viewport + buffer), search bar, "My Empire" jump list, shard name badge
 
-2. **Offline Protection Policy (Phase 1a §9.2):**
-   - **Option A:** Logout immunity (8h shield, no production) — Casual-friendly, reduces stakes
-   - **Option B:** Safe Harbor (dock before logout) — Balanced, rewards planning, **UX RECOMMENDATION**
-   - **Option C:** Hire NPC defenders (costs %, risk management) — Interesting, but complex for MVP
-   - **Option D:** None (hardcore) — Niche audience, likely alienates mobile casuals
-   - **Decision Needed:** Product to choose A, B, or C (UX designed around B, can adapt to A or C)
+2. **Offline Protection (Game Design §8.2 — LOCKED: B+C Hybrid)**
+   - **Decision:** Safe Harbor docking (invulnerable at NPC citadels, costs rent) + optional Hire NPC Defenders for planets
+   - **UX Impact:** Tutorial MUST explain Safe Harbor before first logout (per §8.2 UX handoff)
+   - **UX Requirements:** Safe Harbor status chip (HUD top-right), "Emergency Retreat" button (costs energy), NPC garrison hiring UI in Planet Detail
 
-3. **Combat Pacing: 6s Tick (Phase 1a §9.3):**
-   - **Keep 6s:** Tactical depth, time to coordinate, aligns with legacy feel → **UX RECOMMENDATION**
-   - **Reduce to 2s:** Faster, more immediate feedback, risk of becoming twitch-based (loses strategic identity)
-   - **Real-time (instant):** Feels modern, but destroys Phase 1a's unique strategic cadence
-   - **Decision Needed:** Confirm 6s tick or adjust (client interpolation preserves "instant feel" regardless)
+3. **Combat Pacing (Game Design §8.3 — LOCKED: A keep ~6s)**
+   - **Decision:** ~6-second strategic tick for fleet combat (not twitch)
+   - **UX Impact:** UI must feel instant (tap Fire → immediate feedback <100ms), mask 6s tick with animations (phasor charges 0-6s, impact at 6s)
+   - **UX Anti-Pattern:** Do NOT show "6-second countdown timer" (§6.1 warning — feels turn-based)
 
-4. **Death Penalty: 50% Loss (Phase 1a §9.6):**
-   - **Current (50% cargo drop):** Harsh, creates stakes, fuels revenge loops → Hardcore appeal
-   - **Softened (25% loss + insurance option):** Casual-friendly, reduces frustration → **UX RECOMMENDATION** (insurance as opt-in)
-   - **Decision Needed:** Confirm penalty severity (affects onboarding messaging: "Death is costly but recoverable" vs. "Permadeath is brutal")
+4. **Death Penalty (Game Design §8.6 — LOCKED: C insurance)**
+   - **Decision:** Insurance system (pay premium → recover 75% cargo), uninsured = 50% loss
+   - **UX Impact:** Death screen branches: "Insured: recovered 75%" vs. "Uninsured: lost 50% to [Attacker]"
+   - **UX Requirements:** Insurance purchase UI (Fleet screen), renewal reminders (push notification), "Buy Insurance?" CTA in uninsured death screen
 
-5. **PvE vs PvP Balance (Phase 1a §9.5):**
-   - **Pure PvP (legacy):** Niche, loyal audience, risky for broad mobile market
-   - **Hybrid (PvP + optional PvE sectors):** Broader appeal, casuals can PvE-farm then PvP-conquer → **UX RECOMMENDATION**
-   - **Separate servers:** Splits community, but safe option
-   - **Decision Needed:** Affects onboarding (intro explains PvP danger or offers PvE tutorial choice?)
+5. **PvE vs PvP Balance (Game Design §8.5 — LOCKED: B hybrid)**
+   - **Decision:** PvP conquest spine + optional PvE (alien hives, derelicts, anomalies) that feeds PvP economy
+   - **UX Impact:** Onboarding explains "PvP sandbox with PvE variety" (not safe PvE endgame)
+   - **UX Requirements:** PvE sector markers on map (alien hive icons), co-op mission UI, loot tied to PvP trade economy
 
-6. **Monetization Model (Phase 1a §9.4):**
-   - **Premium ($10 buy-to-play):** No MTX, fair, but small audience
-   - **F2P + cosmetics only:** Ethical, broad audience, lower revenue → **UX RECOMMENDATION** (ship skins, planet themes)
-   - **F2P + time-savers:** P2W-lite (speed up production), revenue risk vs. community backlash
-   - **Subscription ($5/mo):** Fair, predictable revenue, some users avoid subs
-   - **Decision Needed:** Affects UI (shop tab in nav? premium currency? battle pass?)
+6. **Monetization (Game Design §8.4 — LOCKED: B F2P cosmetics, Jeremy confirmed)**
+   - **Decision:** F2P + cosmetics only (ship skins, planet themes, flags, VFX), no P2W production speedups
+   - **UX Impact:** Cosmetic shop UI (Social tab or dedicated shop button), battle pass (free + premium tracks), seasonal rotations
+   - **UX Red Line:** NEVER show "2x production boost" or "+20% weapon damage" monetization
 
-7. **Realtime Skirmish Mode (Phase 1a Combat Optional):**
-   - **Strategic 6s tick only (MVP):** Simpler, aligns with legacy
-   - **Add realtime 1v1 duels (Phase 2+):** Optional twitch mode for stakes/fun, separate queue → Flag as post-launch
-   - **Decision Needed:** If Phase 2, UX needs "Challenge to Duel" button in Target Sheet (out of scope for Phase 1b)
+7. **Hybrid Strategic Realtime (Game Design §8.7 — LOCKED: A)**
+   - **Decision:** Commands instant (tap → <100ms feedback), world resolves at strategic cadence (6s combat, 55s production)
+   - **UX Impact:** "Instant input, deliberate resolution" — player perception = real-time, server = strategic tick
+   - **UX Requirements:** Optimistic UI (fire weapon → show beam immediately), websocket result at 6s mark, smooth interpolation
 
-8. **Alliance/Team Features Depth:**
-   - **Basic (MVP):** Join team, team chat, shared planet access (Phase 1a team mechanics)
-   - **Advanced (Phase 2+):** Alliance wars, territory control, shared treasury, voice chat
-   - **Decision Needed:** Confirm MVP scope (UX designed for basic, hooks exist for advanced)
-
-9. **NPC Density & AI (Phase 1a Cyborgs/Droids):**
-   - **Legacy throttle (2 cyborgs/s, Phase 1a `CYBMAXPERTICK=2`):** Weak, barely noticeable
-   - **Modern (no throttle, scale up):** Cyborgs/droids as persistent threats, patrol sectors, drop loot
-   - **Decision Needed:** Affects PvE feel (empty space vs. active galaxy) → **UX RECOMMENDATION:** High density for solo PvE content
-
-10. **Tutorial Sector: Dedicated or Soft-Gated?**
-    - **Dedicated tutorial instance:** Safe, no PvP, scripted NPCs → Clean UX, but feels "on rails"
-    - **Soft-gated starter sector (e.g., 0,0 neutral zone):** Real world, but PvP-disabled for new players (flag wears off after tutorial complete) → **UX RECOMMENDATION** (more immersive)
-    - **Decision Needed:** Confirm approach (UX designed for soft-gated, can adapt to instance)
+**Additional Locked Decisions:**
+- **Alliance depth (MVP):** Basic features (chat, shared planets, member roster) per Game Design §5.1
+- **NPC density:** Remove legacy throttle, scale up (Game Design §7.3 Kill table)
+- **Tutorial:** 90-second interactive (§9.4 anti-pattern: avoid >3min forced tutorial), soft-gated starter sector or dedicated instance
+- **Realtime skirmish mode:** Deferred post-MVP (Game Design §11.2)
 
 ---
 
@@ -1058,8 +1047,8 @@ This design assumes the following backend capabilities (Stack Architect to valid
 
 ### 5.1 What This Document Delivers
 
-**Comprehensive Mobile UX Vision for Galactic Empire:**
-- **Information Architecture:** 4-5 tab bottom nav (Galaxy, Empire, Fleet, Intel, Social), screen hierarchy for 30+ screens
+**Comprehensive Mobile UX Vision for Galactic Empire (Aligned with Game Design §8 & §9):**
+- **Information Architecture:** 4-tab bottom nav (**Map**, **Fleet**, **Empire**, **Social** per §9.1), screen hierarchy for 40+ screens
 - **Core Flows:** Galaxy navigation (3 zoom levels), combat presentation (ship-to-ship + planet assault), empire management (production, trade, treasury), onboarding (15-min guided tutorial)
 - **HUD Design:** Local Space tactical view with top status strip, center canvas (3D), minimap, contextual action stack, bottom target sheet
 - **Session Flexibility:** Micro (2-5 min), standard (10-20 min), deep (30-45 min) play patterns supported

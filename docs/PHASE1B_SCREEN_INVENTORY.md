@@ -2,12 +2,15 @@
 
 **Date:** 2026-09-11  
 **Companion to:** `PHASE1B_CLIENT_UX_VISION.md`  
+**Aligned with:** `PHASE1B_GAME_DESIGN.md` (PR #2, Designer Mobile UX Contract §9)  
 **Target Platform:** iOS + Android (Unity Editor 6000.4.10f1)  
 **Scope:** Screen-by-screen inventory, wireframe descriptions, interaction notes, states, accessibility.
 
 ---
 
 ## Document Purpose
+
+**This Screen Inventory implements the Designer's Mobile UX Contract (Game Design §9)** and extends the UX Vision with detailed per-screen specifications. Navigation follows the locked 4-tab structure (**Map**, **Fleet**, **Empire**, **Social** per §9.1), HUD elements match §9.1 exactly, and push triggers implement §9.3.
 
 This document provides a **comprehensive inventory of every screen** in the Galactic Empire mobile client, including:
 - Screen ID, name, navigation path
@@ -36,17 +39,18 @@ This document provides a **comprehensive inventory of every screen** in the Gala
 
 ## Screen Inventory Table of Contents
 
+**Aligned with Game Design §9 4-Tab Navigation: Map, Fleet, Empire, Social**
+
 1. [Boot & Auth Screens (3)](#1-boot--auth-screens)
 2. [Onboarding Screens (5)](#2-onboarding-screens)
-3. [Galaxy Tab Screens (8)](#3-galaxy-tab-screens)
+3. [Map Tab Screens (8)](#3-map-tab-screens) — Renamed from "Galaxy" per Designer §9.1
 4. [Empire Tab Screens (6)](#4-empire-tab-screens)
 5. [Fleet Tab Screens (5)](#5-fleet-tab-screens)
-6. [Intel Tab Screens (5)](#6-intel-tab-screens)
-7. [Social Tab Screens (5)](#7-social-tab-screens)
-8. [Overlay & Modal Screens (6)](#8-overlay--modal-screens)
-9. [Settings & Legal Screens (3)](#9-settings--legal-screens)
+6. [Social Tab Screens (8)](#6-social-tab-screens) — Includes Inbox (fka Intel) + Leaderboard + Alliance per §9.2
+7. [Overlay & Modal Screens (6)](#7-overlay--modal-screens)
+8. [Settings & Legal Screens (3)](#8-settings--legal-screens)
 
-**Total Screens:** 46
+**Total Screens:** 44 (consolidated: Intel folded into Social per Designer spec)
 
 ---
 
@@ -438,13 +442,15 @@ Each tutorial step follows similar structure:
 
 ---
 
-## 3. Galaxy Tab Screens
+## 3. Map Tab Screens
+
+**Designer Note:** "Map" tab naming per Game Design §9.1 (replaces "Galaxy" from earlier drafts). Covers galaxy overview, sector grid, local space HUD, and all navigation/combat screens.
 
 ### 3.1 Galaxy Overview (ID: `MAP_001`)
 
 **Name:** Galaxy Overview (Strategic Map, Zoom Level 1)  
-**Nav Path:** Tap Galaxy tab (bottom nav) → Default view if no prior zoom state  
-**Primary Goal:** Strategic planning, find targets, bookmark locations
+**Nav Path:** Tap **Map** tab (bottom nav) → Default view if no prior zoom state  
+**Primary Goal:** Strategic planning, find targets, bookmark locations, navigate sharded universe (~100×50 sectors per Game Design §8.1)
 
 **Key Components:**
 - Top-down grid view (30×15 sectors, or larger if Phase 1a §9.1 expanded)
@@ -485,16 +491,17 @@ Each tutorial step follows similar structure:
 **Exit:** Tap sector → Sector Grid View, or switch tab
 
 **States:**
-- **Default:** Map rendered, fog of war active
+- **Default:** Map rendered, fog of war active (shard size ~100×50 per §8.1, virtualized rendering)
 - **Loading (First Time):** "Loading galaxy..." spinner over blank grid
-- **Empty (New Player):** Mostly fog (gray), tutorial sector (0,0) highlighted with pulsing border
+- **Empty (New Player):** Mostly fog (gray), tutorial sector or starter zone highlighted with pulsing border
 - **Threat Heat ON:** Red overlay intensity on enemy-dense sectors
+- **Shard Identity:** Shard name badge (e.g., "Galaxy Andromeda") top-left per §8.1
 
 **Push/Deep Link:** 
 - Deep link from push: `ge://map/sector/12/5` → Auto-navigate to sector 12,5
 
 **Accessibility:**
-- VoiceOver: "Galaxy map. Sector 12,5: 3 planets, ownership neutral, threat low."
+- VoiceOver: "Map view. Shard Galaxy Andromeda. Sector 12,5: 3 planets, ownership neutral, threat low."
 - Pan gesture alternative: D-pad overlay (optional, Settings → Accessibility) for non-pinch navigation
 - Contrast: High-contrast mode (Settings) increases sector border thickness
 
@@ -1713,13 +1720,47 @@ Each tutorial step follows similar structure:
 
 ---
 
-## 6. Intel Tab Screens
+## 6. Social Tab Screens
 
-### 6.1 Intel Inbox (ID: `INTEL_001`)
+**Designer Note:** Social tab per Game Design §9.1 & §9.2 includes: Alliance sub-tab, Inbox sub-tab (notifications history, fka "Intel"), and Leaderboard sub-tab. Consolidates social features, messaging, and competitive ranking.
 
-**Name:** Intel Inbox  
-**Nav Path:** Tap Intel tab → Default view  
-**Primary Goal:** Browse messages, alerts, spy reports, killmails
+### 6.1 Social Hub / Alliance Home (ID: `SOCIAL_001`)
+
+**Name:** Social Hub (Alliance Tab, Default View if in Alliance)  
+**Nav Path:** Tap **Social** tab → Alliance sub-tab (if in alliance) or Leaderboard (if solo)  
+**Primary Goal:** View alliance info, members, alliance chat, coordinate conquest
+
+**Key Components:**
+- Team name + badge/emblem (large, top)
+- Alliance score + rank (e.g., "₡8.5M, Rank #3/50" per Game Design §4.4)
+- Member roster (scrollable: avatar, name, networth, online status)
+- "Open Alliance Chat" button → Alliance Chat screen (§6.2)
+- Alliance tech pool (contribute/spend points per §5.1)
+- Territory map (alliance-controlled sectors highlighted)
+- Management buttons (if officer/leader): "Invite Member", "Set Password", "Kick Member"
+
+**Wireframe:** (See Phase 1b UX Vision §2.x for alliance management detail)
+
+**Entry:** Social tab tap  
+**Exit:** Tap sub-tab (Inbox, Leaderboard) or navigate to Alliance Chat
+
+**States:**
+- **In Alliance:** Alliance home shown
+- **Solo Player:** Redirects to Leaderboard, "Join an Alliance" CTA banner at top
+
+**Push/Deep Link:**
+- `ge://social/alliance` → Alliance Home
+
+**Accessibility:**
+- VoiceOver: "Social tab. Alliance Name. Score 8.5 million. Rank 3 of 50. 12 members online."
+
+---
+
+### 6.2 Inbox (Notifications History) (ID: `SOCIAL_002`)
+
+**Name:** Inbox (Notifications History, fka "Intel Inbox")  
+**Nav Path:** Tap **Social** tab → **Inbox** sub-tab  
+**Primary Goal:** Browse notifications history (attack reports, production alerts, spy reports, killmails, seasonal rewards)
 
 **Key Components:**
 - "Intel" title
