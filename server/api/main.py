@@ -31,24 +31,27 @@ app.add_middleware(
 async def startup_event():
     """
     Initialize connections on startup.
-    TODO: Connect to Postgres (asyncpg pool)
-    TODO: Connect to Redis (aioredis)
-    TODO: Initialize Firebase Admin SDK
-    TODO: Start background tasks (health checks, metrics)
     """
     logger.info("api_startup", message="Galactic Empire API starting")
-    # TODO: db_pool = await create_db_pool()
-    # TODO: redis = await create_redis_connection()
-    # TODO: firebase_app = initialize_firebase()
+    # Redis connection is lazily initialized by WebSocket handler
+    # TODO: Connect to Postgres (asyncpg pool)
+    # TODO: Initialize Firebase Admin SDK
+    # TODO: Start background tasks (health checks, metrics)
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """
     Clean up connections on shutdown.
-    TODO: Close Postgres pool
-    TODO: Close Redis connection
     """
     logger.info("api_shutdown", message="Galactic Empire API shutting down")
+    
+    # Close Redis connection used by WebSocket
+    from api.routes.websocket import redis_client
+    if redis_client:
+        await redis_client.close()
+        logger.info("api_redis_closed")
+    
+    # TODO: Close Postgres pool
 
 @app.get("/")
 async def root():
