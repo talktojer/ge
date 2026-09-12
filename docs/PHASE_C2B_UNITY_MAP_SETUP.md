@@ -52,19 +52,33 @@ Unity client implementation for Map screen with REST and WebSocket integration.
 
 ## Unity Editor Setup
 
+### Boot Scene Setup (Required for Navigation)
+
+1. Open `BOOT_001_Splash.unity` scene
+2. Select any active GameObject (e.g., Canvas root)
+3. Add Component: `BootToMapNavigation`
+4. Configure (or leave defaults):
+   - Map Scene Name: `MAP_001_GalaxyOverview` (default)
+   - Button will auto-create after Sign in
+5. Ensure `MAP_001_GalaxyOverview` scene is in Build Settings
+
+**Result**: After Sign in (dev), a "Map" button appears and loads the Map scene with authentication token wired through `GameStateManager`.
+
 ### Option 1: Quick Test with MapSceneSetupHelper (Recommended)
 
 1. Open Unity Editor 6000.4.10f1
-2. Create a new scene: `File > New Scene`
+2. Create a new scene: `File > New Scene` (or use existing `MAP_001_GalaxyOverview`)
 3. Add an empty GameObject: `GameObject > Create Empty`
 4. Name it "MapController"
 5. Attach scripts:
    - Add `MapTabController` component
    - Add `MapSceneSetupHelper` component (will auto-create UI)
-6. Ensure EventSystem exists or will be created automatically
-7. Press Play
+6. Ensure EventSystem with `InputSystemUIInputModule` exists (or will be created)
+7. Press Play from Boot scene
 
 The `MapSceneSetupHelper` will programmatically create all UI elements if they're not assigned.
+
+**Important**: Project uses Input System. `MapSceneSetupHelper` creates `InputSystemUIInputModule` (NOT `StandaloneInputModule`).
 
 ### Option 2: Manual Scene Setup (Full Control)
 
@@ -88,11 +102,14 @@ The `MapSceneSetupHelper` will programmatically create all UI elements if they'r
 
 ### EventSystem Requirement
 
-Ensure an EventSystem exists in the scene:
-- `GameObject > UI > Event System`
-- Use `StandaloneInputModule` (or `InputSystemUIInputModule` if using new Input System)
+**REQUIRED**: Project uses Input System (NOT Legacy Input).
 
-Per project requirements, keep `InputSystemUIInputModule` on EventSystem if already configured.
+Ensure an EventSystem with `InputSystemUIInputModule` exists:
+- `GameObject > UI > Event System`
+- Add Component: `InputSystemUIInputModule` (from Unity.InputSystem.UI)
+- Remove any `StandaloneInputModule` components
+
+`MapSceneSetupHelper` will auto-create EventSystem with correct `InputSystemUIInputModule` if missing.
 
 ## Testing the Map Client
 
@@ -116,10 +133,11 @@ Per project requirements, keep `InputSystemUIInputModule` on EventSystem if alre
 2. **Sign In**: Click "Sign in (dev)" button
    - Should display: "Signed in: player_..."
    - Session token stored in GameStateManager
+   - "Map" button appears (enabled after auth)
 
-3. **Load Map Scene**: 
-   - Manually load Map scene (if separate)
-   - Or add Map tab button to Boot scene for navigation
+3. **Navigate to Map**: Click "Map" button
+   - Loads `MAP_001_GalaxyOverview` scene
+   - Session token wired through GameStateManager
 
 4. **Map Scene**:
    - Click "Load Galaxy" button
@@ -195,17 +213,18 @@ Per project requirements, keep `InputSystemUIInputModule` on EventSystem if alre
 
 ## Integration with Boot Scene
 
-To add Map navigation from Boot scene:
+**DONE**: Use `BootToMapNavigation` component (included in PR).
 
 1. Open `BOOT_001_Splash.unity`
-2. Add a "Map" button after "Who am I" button
-3. Attach click handler:
-   ```csharp
-   public void OnMapClicked()
-   {
-       UnityEngine.SceneManagement.SceneManager.LoadScene("MAP_001_GalaxyOverview");
-   }
-   ```
+2. Select any active GameObject (e.g., Canvas root)
+3. Add Component: `BootToMapNavigation`
+4. Component will:
+   - Auto-create "Map" button on Start
+   - Enable button only when authenticated
+   - Load `MAP_001_GalaxyOverview` scene on click
+   - Wire GameStateManager session token through
+
+**Play path**: Boot → Sign in (dev) → Map button appears → Click Map → Map scene loads with auth
 
 ## API Configuration
 
