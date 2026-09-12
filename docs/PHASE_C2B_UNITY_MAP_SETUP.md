@@ -178,9 +178,10 @@ Per project requirements, keep `InputSystemUIInputModule` on EventSystem if alre
 - Session token expired or invalid
 - Sign in again
 
-**"WebSocket error: Connection failed"**
+**"WebSocket error: Connection failed"** or **"403 Forbidden"**
 - Ensure server is running at `https://ge.jersweb.net` (or `http://localhost:8000` if testing locally)
-- Check NetworkConfig.cs WEBSOCKET_URL setting
+- Check NetworkConfig.cs WEBSOCKET_URL has trailing slash: `wss://ge.jersweb.net/ws/`
+- nginx routing requires trailing slash on live host (returns 403 without it)
 
 **No sectors displayed**
 - Check Console logs for API response
@@ -209,13 +210,13 @@ To add Map navigation from Boot scene:
 ## API Configuration
 
 Configured in `NetworkConfig.cs`:
-- **API_BASE_URL**: `https://ge.jersweb.net`
-- **WEBSOCKET_URL**: `wss://ge.jersweb.net/ws`
+- **API_BASE_URL**: `https://ge.jersweb.net` (no trailing slash)
+- **WEBSOCKET_URL**: `wss://ge.jersweb.net/ws/` (trailing slash REQUIRED for nginx)
 
 For local testing, temporarily change to:
 ```csharp
 public const string API_BASE_URL = "http://localhost:8000";
-public const string WEBSOCKET_URL = "ws://localhost:8000/ws";
+public const string WEBSOCKET_URL = "ws://localhost:8000/ws/";  // Keep trailing slash
 ```
 
 ## Known Limitations

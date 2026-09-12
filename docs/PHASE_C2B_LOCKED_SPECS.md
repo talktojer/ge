@@ -5,29 +5,34 @@
 
 ## Locked-In Requirements
 
-### 1. Exact API Paths (NO Trailing Slash)
+### 1. Exact API Paths - REST vs WebSocket
 
-✅ **LOCKED**: Use exact paths with NO trailing slash to avoid redirect issues with UnityWebRequest.
+✅ **LOCKED**: Different trailing slash rules for REST vs WebSocket due to nginx routing.
 
-**REST Endpoints:**
+**REST Endpoints (NO trailing slash):**
 - ✅ `GET /sectors` - Galaxy overview
 - ✅ `GET /sectors/{id}` - Sector detail
 
-**WebSocket Endpoint:**
-- ✅ `/ws` - WebSocket connection
+**WebSocket Endpoint (WITH trailing slash):**
+- ✅ `/ws/` - WebSocket connection (trailing slash REQUIRED for nginx on live host)
 
 **Implementation:**
 ```csharp
 // NetworkConfig.cs
 public const string API_BASE_URL = "https://ge.jersweb.net";  // NO trailing slash
-public const string WEBSOCKET_URL = "wss://ge.jersweb.net/ws";
+public const string WEBSOCKET_URL = "wss://ge.jersweb.net/ws/";  // WITH trailing slash
 
-// API calls
+// REST calls - no trailing slash
 GetEndpointUrl("/sectors")        // → https://ge.jersweb.net/sectors
 GetEndpointUrl("/sectors/{id}")   // → https://ge.jersweb.net/sectors/1
+
+// WebSocket connection - with trailing slash
+WEBSOCKET_URL + "?token=" + token // → wss://ge.jersweb.net/ws/?token=...
 ```
 
-**Why**: UnityWebRequest can fail on redirect (301/302) for POST/WebSocket upgrades. Exact paths prevent unnecessary redirects.
+**Why**: 
+- REST: UnityWebRequest can fail on redirect (301/302), so no trailing slash
+- WebSocket: nginx routing requires trailing slash, returns 403 without it (live host @ c1ea2ea)
 
 ---
 
@@ -144,7 +149,7 @@ docker-compose -f docker-compose.dev.yml up
 ## Verification Checklist
 
 ✅ **REST paths**: `/sectors` and `/sectors/{id}` with NO trailing slash  
-✅ **WebSocket path**: `/ws` with NO trailing slash  
+✅ **WebSocket path**: `/ws/` with TRAILING SLASH (nginx requirement on live host)  
 ✅ **sector_id**: Integer field in subscribe/unsubscribe messages  
 ✅ **Delta timing**: ~5s stub timing accepted for C2b (6s ADR is C2c)  
 ✅ **Dependencies**: Live test blocked on C2a merge+redeploy (local test OK)  
@@ -154,9 +159,9 @@ docker-compose -f docker-compose.dev.yml up
 ## Code Review Sign-Off
 
 **Requirement 1 (Exact Paths)**: ✅ PASS
-- NetworkConfig.cs: No trailing slashes
-- GetEndpointUrl(): Correct path construction
-- All API calls use correct paths
+- NetworkConfig.cs: REST no trailing slash, WebSocket WITH trailing slash
+- GetEndpointUrl(): Correct REST path construction
+- WEBSOCKET_URL: `/ws/` with trailing slash per nginx routing (live host @ c1ea2ea)
 
 **Requirement 2 (Delta Timing)**: ✅ PASS
 - Client accepts ~5s deltas
