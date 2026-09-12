@@ -161,7 +161,23 @@ API WebSocket handlers subscribe to Redis channels and fan-out to connected clie
 - `teams` - name, members, score
 - `mail` - recipient_id, type (attack/production/spy), content, read_at
 
-## Firebase Auth Integration
+## Authentication
+
+### Phase C1 Implementation (DEV Bypass)
+
+**Default mode on ge.jersweb.net: DEV BYPASS**
+
+POST /auth/exchange accepts a dev token instead of Firebase JWT:
+- Body: `{"dev_token": "ge-dev-user-123"}` 
+- OR Header: `X-GE-Dev-Token: ge-dev-user-123`
+- Format: `ge-dev-user-{any_id}` where `any_id` becomes the player_id
+- Returns session JWT valid for 1 hour
+
+GET /auth/me returns player stub (requires Bearer token):
+- Header: `Authorization: Bearer {session_token}`
+- Returns: `{player_id, display_name, cash, kills, planets_owned}`
+
+### Firebase Auth Integration (Future)
 
 1. Unity client: User signs in with Apple/Google → obtains Firebase ID token
 2. Client: POST /auth/exchange with Firebase token
