@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace GalacticEmpire.Models
 {
@@ -14,7 +13,7 @@ namespace GalacticEmpire.Models
         public string shard_id;
         public int width;
         public int height;
-        public List<SectorStub> sectors;
+        public SectorStub[] sectors;
     }
 
     [Serializable]
@@ -38,8 +37,8 @@ namespace GalacticEmpire.Models
         public string name;
         public string sector_type;
         public int planet_count;
-        public List<PlanetData> planets;
-        public List<ShipData> ships;
+        public PlanetData[] planets;
+        public ShipData[] ships;
     }
 
     [Serializable]
@@ -110,8 +109,8 @@ namespace GalacticEmpire.Models
         public int id;
         public int x;
         public int y;
-        public List<ShipData> ships;
-        public List<PlanetData> planets;
+        public ShipData[] ships;
+        public PlanetData[] planets;
     }
 
     [Serializable]
@@ -120,7 +119,7 @@ namespace GalacticEmpire.Models
         public int sector_id;
         public int tick;
         public string timestamp;
-        public List<SectorEvent> events;
+        public SectorEvent[] events;
     }
 
     [Serializable]

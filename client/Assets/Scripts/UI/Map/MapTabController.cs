@@ -84,7 +84,8 @@ namespace GalacticEmpire.UI.Map
         private void OnGalaxyLoaded(GalaxyOverviewResponse response)
         {
             galaxyData = response;
-            SetStatus($"Galaxy loaded: {response.sectors.Count} sectors in shard {response.shard_id}");
+            int sectorCount = response.sectors?.Length ?? 0;
+            SetStatus($"Galaxy loaded: {sectorCount} sectors in shard {response.shard_id}");
             DisplaySectorList();
         }
 
@@ -171,7 +172,7 @@ namespace GalacticEmpire.UI.Map
             string detail = $"<b>{currentSectorDetail.name}</b> ({currentSectorDetail.x},{currentSectorDetail.y})\n";
             detail += $"Type: {currentSectorDetail.sector_type}\n\n";
 
-            detail += $"<b>Planets ({currentSectorDetail.planets?.Count ?? 0}):</b>\n";
+            detail += $"<b>Planets ({currentSectorDetail.planets?.Length ?? 0}):</b>\n";
             if (currentSectorDetail.planets != null)
             {
                 foreach (var planet in currentSectorDetail.planets)
@@ -181,7 +182,7 @@ namespace GalacticEmpire.UI.Map
                 }
             }
 
-            detail += $"\n<b>Ships ({currentSectorDetail.ships?.Count ?? 0}):</b>\n";
+            detail += $"\n<b>Ships ({currentSectorDetail.ships?.Length ?? 0}):</b>\n";
             if (currentSectorDetail.ships != null)
             {
                 foreach (var ship in currentSectorDetail.ships)
@@ -243,7 +244,7 @@ namespace GalacticEmpire.UI.Map
             
             if (snapshot.data?.ships != null)
             {
-                SetLiveUpdates($"Ships: {snapshot.data.ships.Count}\n", append: true);
+                SetLiveUpdates($"Ships: {snapshot.data.ships.Length}\n", append: true);
                 foreach (var ship in snapshot.data.ships)
                 {
                     SetLiveUpdates($"- Ship {ship.id} @ ({ship.x},{ship.y}) heading {ship.heading}° speed {ship.speed}\n", append: true);

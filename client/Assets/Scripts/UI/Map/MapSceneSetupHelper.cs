@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 
 namespace GalacticEmpire.UI.Map
 {
@@ -19,12 +20,18 @@ namespace GalacticEmpire.UI.Map
 
         private void EnsureEventSystem()
         {
-            if (FindObjectOfType<EventSystem>() == null)
+            var existingEventSystem = FindObjectOfType<EventSystem>();
+            
+            if (existingEventSystem == null)
             {
                 var eventSystemObj = new GameObject("EventSystem");
                 eventSystemObj.AddComponent<EventSystem>();
-                var inputModule = eventSystemObj.AddComponent<StandaloneInputModule>();
-                Debug.Log("[MapSceneSetup] Created EventSystem with StandaloneInputModule");
+                var inputModule = eventSystemObj.AddComponent<InputSystemUIInputModule>();
+                Debug.Log("[MapSceneSetup] Created EventSystem with InputSystemUIInputModule");
+            }
+            else
+            {
+                Debug.Log("[MapSceneSetup] Using existing EventSystem");
             }
         }
 
