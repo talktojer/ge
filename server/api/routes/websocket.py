@@ -6,7 +6,9 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import json
 import structlog
 import asyncio
-from typing import Set, Dict, Any
+import redis.asyncio as aioredis
+import os
+from typing import Set, Dict, Any, Optional
 from datetime import datetime
 
 from api.dependencies import validate_websocket_token
@@ -18,6 +20,19 @@ router = APIRouter()
 # Track active WebSocket connections and their subscriptions
 # Key: WebSocket object, Value: set of subscribed sector_ids
 active_connections: Dict[WebSocket, Set[int]] = {}
+
+# Global Redis connection for pub/sub
+redis_client: Optional[aioredis.Redis] = None
+
+
+async def get_redis():
+    """Get or create Redis connection."""
+    global redis_client
+    if redis_client is None:
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        redis_client = await aioredis.from_url(redis_url, decode_responses=True)
+        logger.info("websocket_redis_connected", redis_url=redis_url)
+    return redis_client
 
 
 async def send_sector_snapshot(websocket: WebSocket, sector_id: int, player_id: str):
@@ -51,55 +66,51 @@ async def send_sector_snapshot(websocket: WebSocket, sector_id: int, player_id: 
     logger.info("sector_snapshot_sent", sector_id=sector_id, player_id=player_id)
 
 
-async def broadcast_sector_deltas(websocket: WebSocket, sector_id: int):
+async def subscribe_to_redis_sector(websocket: WebSocket, sector_id: int):
     """
-    Background task to periodically send stub sector deltas.
+    Subscribe to Redis pub/sub for a sector and forward events to WebSocket.
     
-    Phase C2a: Sends heartbeat ticks and fake entity moves every few seconds.
-    Future: Subscribe to Redis pubsub and forward real ge-sim events.
+    Phase C2c: Real Redis pub/sub from ge-sim ticks (6s/55s).
+    Replaces the Phase C2a stub 5s timer.
     """
-    tick_count = 0
+    redis = await get_redis()
+    pubsub = redis.pubsub()
+    channel = f"sector:{sector_id}:delta"
     
     try:
-        while True:
-            await asyncio.sleep(5)  # Send delta every 5 seconds
-            
-            tick_count += 1
-            
-            # Stub delta: heartbeat + fake ship movement
-            delta = {
-                "type": "sector_delta",
-                "sector_id": sector_id,
-                "tick": tick_count,
-                "timestamp": datetime.utcnow().isoformat(),
-                "events": [
-                    {
-                        "event_type": "heartbeat",
-                        "message": f"Tick {tick_count}"
-                    },
-                    {
-                        "event_type": "ship_moved",
-                        "ship_id": 201,
-                        "old_position": {"x": 5, "y": 5},
-                        "new_position": {"x": 5 + (tick_count % 3), "y": 5 + (tick_count % 2)},
-                        "heading": 90.0,
-                        "speed": 5.0
-                    }
-                ]
-            }
-            
-            # Only send if still subscribed
-            if websocket in active_connections and sector_id in active_connections[websocket]:
-                await websocket.send_text(json.dumps(delta))
-                logger.debug("sector_delta_sent", sector_id=sector_id, tick=tick_count)
-            else:
-                # Client unsubscribed or disconnected
-                break
+        await pubsub.subscribe(channel)
+        logger.info("redis_sector_subscribed", 
+                   sector_id=sector_id,
+                   channel=channel)
+        
+        # Listen for messages from Redis
+        async for message in pubsub.listen():
+            if message["type"] == "message":
+                # Forward Redis message to WebSocket client
+                data = message["data"]
                 
+                # Only send if still subscribed
+                if websocket in active_connections and sector_id in active_connections[websocket]:
+                    await websocket.send_text(data)
+                    logger.debug("sector_delta_forwarded", 
+                               sector_id=sector_id,
+                               data_preview=data[:100] if len(data) > 100 else data)
+                else:
+                    # Client unsubscribed or disconnected
+                    break
+                    
     except asyncio.CancelledError:
-        logger.info("delta_broadcast_cancelled", sector_id=sector_id)
+        logger.info("redis_subscription_cancelled", sector_id=sector_id)
     except Exception as e:
-        logger.error("delta_broadcast_error", sector_id=sector_id, error=str(e))
+        logger.error("redis_subscription_error", 
+                    sector_id=sector_id,
+                    error=str(e))
+    finally:
+        await pubsub.unsubscribe(channel)
+        await pubsub.close()
+        logger.info("redis_sector_unsubscribed",
+                   sector_id=sector_id,
+                   channel=channel)
 
 
 @router.websocket("/")
@@ -234,9 +245,9 @@ async def websocket_endpoint(websocket: WebSocket, token: str = None):
                 # Send initial sector snapshot
                 await send_sector_snapshot(websocket, sector_id, player_id)
                 
-                # Start broadcasting deltas for this sector
+                # Start Redis subscription for this sector (replaces 5s stub timer)
                 if sector_id not in broadcast_tasks:
-                    task = asyncio.create_task(broadcast_sector_deltas(websocket, sector_id))
+                    task = asyncio.create_task(subscribe_to_redis_sector(websocket, sector_id))
                     broadcast_tasks[sector_id] = task
             
             elif msg_type == "unsubscribe":
