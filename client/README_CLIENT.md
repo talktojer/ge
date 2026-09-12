@@ -9,6 +9,38 @@ Unity Editor 6000.4.10f1 mobile client for iOS and Android.
 3. Open Unity Hub → Projects → Add → Select this `client/` directory
 4. Unity will recognize the project structure and open it
 
+## Phase C1 - Playing the Auth Slice (Current)
+
+### Prerequisites
+- Unity Editor 6000.4.10f1 open with this project
+- Backend running at `https://ge.jersweb.net` (or local)
+
+### Play Path in Unity Editor
+
+1. Open scene: `Assets/Scenes/Stub/Boot/BOOT_001_Splash.unity`
+2. Press **Play** in Unity Editor
+3. Click **"Check Health"** button → should show "Pass: healthy"
+4. Click **"Sign in (dev)"** button → authenticates with DEV bypass token `ge-dev-user-jeremy`
+   - On success: Shows "Signed in: jeremy" and enables "Who am I" button
+5. Click **"Who am I"** button → fetches player profile from protected endpoint
+   - Shows: `Player_jeremy`, Cash: 1000, Kills: 0, Planets: 0
+
+### What's Working (Phase C1)
+✅ **Client → Server REST communication** over HTTPS to `https://ge.jersweb.net`  
+✅ **Health check** - GET /health  
+✅ **DEV bypass auth** - POST /auth/exchange with `{"dev_token": "ge-dev-user-jeremy"}`  
+✅ **Protected endpoint** - GET /auth/me with Bearer token  
+✅ **Session management** - 1-hour JWT stored in-memory  
+✅ **CORS configured** - Unity Editor can hit production API
+
+### Technical Details (DEV Bypass)
+- **No Firebase required** - Uses dev token bypass: `ge-dev-user-{id}`
+- **Session JWT** - Server returns 1-hour JWT signed with `JWT_SECRET`
+- **Bearer auth** - Client sends `Authorization: Bearer {token}` header
+- **Default on ge.jersweb.net** - DEV bypass is the default auth mode
+
+See `server/README_SERVER.md` "Authentication" section for server-side details.
+
 ## Project Structure
 
 ```
