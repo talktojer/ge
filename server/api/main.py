@@ -75,13 +75,13 @@ async def health():
     }
 
 # Include routers
-from api.routes import auth, player, commands, websocket
+from api.routes import auth, player, commands, websocket, sectors
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(player.router, prefix="/player", tags=["player"])
 app.include_router(commands.router, prefix="/commands", tags=["commands"])
 app.include_router(websocket.router, prefix="/ws", tags=["websocket"])
+app.include_router(sectors.router, prefix="/sectors", tags=["sectors"])
 
-# TODO: Add sector and trade routers when implemented
-# app.include_router(sector.router, prefix="/sector", tags=["sector"])
+# TODO: Add trade router when implemented
 # app.include_router(trade.router, prefix="/trade", tags=["trade"])

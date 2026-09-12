@@ -94,30 +94,38 @@ python -m ge_sim
 ## API Endpoints
 
 ### Authentication
-- `POST /auth/exchange` - Exchange Firebase JWT for session token
+- `POST /auth/exchange` - Exchange Firebase JWT for session token (DEV mode: use dev_token)
+- `GET /auth/me` - Get current authenticated player info
 
-### Player
+### Galaxy & Sectors (Phase C2a ✅)
+- `GET /sectors` - Galaxy overview with all sector stubs
+- `GET /sectors/{id}` - Detailed sector data (planets, ships)
+
+**Phase C2a Status**: Implemented with stub data. See [docs/PHASE_C2A_MAP_API.md](../docs/PHASE_C2A_MAP_API.md) for full API documentation and testing examples.
+
+### Player (Stub)
 - `GET /player/profile` - Get player profile
 - `GET /player/ships` - List player ships
 - `GET /player/planets` - List player planets
 
-### Commands (require auth)
+### Commands (Stub, require auth)
 - `POST /commands/move` - Move ship to sector
 - `POST /commands/fire` - Fire weapons at target
 - `POST /commands/claim` - Claim planet
 
-### Sector
-- `GET /sector/{x}/{y}` - Get sector data (planets, ships, contacts)
-
-### Trade
+### Trade (Not yet implemented)
 - `POST /trade/buy` - Buy items at docked planet
 - `POST /trade/sell` - Sell cargo at docked planet
 
-### WebSocket
-- `WS /ws` - Real-time updates
-  - Subscribe: `{"type": "subscribe", "sector": {"x": 5, "y": 7}}`
-  - Unsubscribe: `{"type": "unsubscribe", "sector": {"x": 5, "y": 7}}`
-  - Events: `ship_moved`, `combat_damage`, `planet_production_complete`
+### WebSocket (Phase C2a ✅)
+- `WS /ws` - Real-time sector updates
+  - Auth: Query param `?token=<jwt>` or message `{"type": "auth", "token": "..."}`
+  - Subscribe: `{"type": "subscribe", "sector_id": 1}`
+  - Unsubscribe: `{"type": "unsubscribe", "sector_id": 1}`
+  - Snapshot: Server sends full sector state on subscribe
+  - Deltas: Periodic updates (heartbeat, ship movements) every 5s
+  
+**Phase C2a Status**: Implemented with stub deltas. See [docs/PHASE_C2A_MAP_API.md](../docs/PHASE_C2A_MAP_API.md) for WebSocket protocol details.
 
 ## ge-sim Simulation Engine
 
