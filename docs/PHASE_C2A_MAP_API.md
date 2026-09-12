@@ -4,6 +4,8 @@ Session-gated REST and WebSocket APIs for Unity Map client to load galaxy/sector
 
 **Note:** Phase C2c has superseded the 5-second stub timer with real ge-sim-driven deltas at 6s/55s intervals via Redis pub/sub. See [PHASE_C2C_GESIM_DELTAS.md](PHASE_C2C_GESIM_DELTAS.md).
 
+**WebSocket Path:** Both `/ws` and `/ws/` are accepted. Use `wss://ge.jersweb.net/ws/` (with trailing slash) for live deployment.
+
 ## Overview
 
 **Ticket**: Phase C2a - First ticket of C2+ initiative  

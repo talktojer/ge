@@ -114,9 +114,12 @@ async def subscribe_to_redis_sector(websocket: WebSocket, sector_id: int):
 
 
 @router.websocket("/")
+@router.websocket("")
 async def websocket_endpoint(websocket: WebSocket, token: str = None):
     """
     WebSocket connection for real-time sector updates.
+    
+    Accepts both /ws and /ws/ paths (trailing slash handling for live deployment).
     
     Authentication:
     - Pass token as query parameter: /ws?token=<session_jwt>

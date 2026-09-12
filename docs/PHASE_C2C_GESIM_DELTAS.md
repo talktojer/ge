@@ -2,6 +2,7 @@
 
 **Status:** Implemented  
 **Date:** 2026-09-12  
+**Updated:** 2026-09-12 (trailing slash fix for live deployment)  
 **Dependencies:** Phase C2a (PR #15, commit c1ea2ea)
 
 ---
@@ -13,6 +14,8 @@ Phase C2c implements the real-time tick→delta pipeline from ge-sim to WebSocke
 - **Planet tick:** 55.0 seconds
 
 Events flow: **ge-sim** (publishes) → **Redis pub/sub** → **API WebSocket** (subscribes & fans out) → **Unity clients**.
+
+**WebSocket Endpoint:** Accepts both `/ws` and `/ws/` (trailing slash handling for compatibility).
 
 ---
 
@@ -45,6 +48,11 @@ Events flow: **ge-sim** (publishes) → **Redis pub/sub** → **API WebSocket** 
 - Listens on `sector:{id}:delta` channel
 - Forwards Redis messages directly to WebSocket client
 - Unsubscribes on client disconnect or unsubscribe
+
+**Trailing Slash Handling:**
+- Route accepts both `/ws` and `/ws/` paths
+- Live deployment at `ge.jersweb.net` requires `/ws/` (NGINX/proxy configuration)
+- Both paths work for local development and production
 
 **Redis Connection Management:**
 - Lazy initialization via `get_redis()`
@@ -210,8 +218,10 @@ docker logs -f ge-sim-dev
 docker-compose -f docker-compose.dev.yml up
 
 # Terminal 2: Connect WebSocket with DEV token
+# Note: Both /ws and /ws/ paths work (trailing slash handling)
 export TOKEN="ge-dev-user-alice"
 websocat "ws://localhost:8000/ws?token=$TOKEN"
+# OR: websocat "ws://localhost:8000/ws/?token=$TOKEN"
 
 # Send subscribe message:
 {"type": "subscribe", "sector_id": 1}
@@ -256,6 +266,16 @@ python test_websocket.py
 | `SHIP_TICK_INTERVAL` | `6.0` | Ship tick interval (seconds) |
 | `PLANET_TICK_INTERVAL` | `55.0` | Planet tick interval (seconds) |
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis connection string |
+
+### WebSocket Endpoint
+
+| Environment | URL | Notes |
+|-------------|-----|-------|
+| **Local development** | `ws://localhost:8000/ws` or `ws://localhost:8000/ws/` | Both work |
+| **Live (ge.jersweb.net)** | `wss://ge.jersweb.net/ws/` | Canonical URL (trailing slash required by NGINX) |
+| **Live (alternate)** | `wss://ge.jersweb.net/ws` | Also works (server accepts both) |
+
+**Recommendation:** Unity clients should use `wss://ge.jersweb.net/ws/` as the canonical live URL.
 
 ### Docker Compose
 

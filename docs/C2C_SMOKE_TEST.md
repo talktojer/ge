@@ -49,9 +49,10 @@ docker logs -f ge-sim-dev | grep tick
 # Terminal 1: Start services
 docker-compose -f docker-compose.dev.yml up
 
-# Terminal 2: Connect WebSocket
+# Terminal 2: Connect WebSocket (both /ws and /ws/ work)
 export TOKEN="ge-dev-user-alice"
 websocat -v "ws://localhost:8000/ws?token=$TOKEN"
+# OR: websocat -v "ws://localhost:8000/ws/?token=$TOKEN"
 
 # Type and press Enter:
 {"type": "subscribe", "sector_id": 1}
@@ -201,6 +202,15 @@ docker logs -f ge-sim-dev | grep tick
 - ✅ Planet ticks fire at custom interval (10s)
 - ✅ WebSocket clients receive deltas at new intervals
 - ✅ Restore to 6.0/55.0 after test (ADR defaults)
+
+## WebSocket Path Note
+
+**Both `/ws` and `/ws/` paths are accepted** (trailing slash handling).
+
+- **Local development:** `ws://localhost:8000/ws` or `ws://localhost:8000/ws/`
+- **Live deployment:** `wss://ge.jersweb.net/ws/` (canonical, trailing slash required by NGINX)
+
+If connecting to live deployment and seeing 403 errors, ensure you're using `wss://ge.jersweb.net/ws/` (with trailing slash).
 
 ## Common Issues
 
