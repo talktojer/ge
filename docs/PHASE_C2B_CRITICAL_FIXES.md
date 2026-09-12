@@ -196,12 +196,62 @@ int shipCount = snapshot.data.ships?.Length;
 
 ---
 
-**Status**: ✅ ALL CRITICAL FIXES APPLIED
+## Re-Static Fixes (Second Pass)
+
+### 5. ✅ BootToMapNavigation Wired in Boot Scene
+
+**Fixed**: `BootToMapNavigation` component now attached to AuthController GameObject in `BOOT_001_Splash.unity`.
+
+**Scene Changes**:
+```yaml
+# BOOT_001_Splash.unity - AuthController GameObject
+m_Component:
+  - component: {fileID: 1000000035}  # Transform
+  - component: {fileID: 1000000036}  # AuthController
+  - component: {fileID: 1000000060}  # BootToMapNavigation (NEW)
+```
+
+**Component Definition**:
+```yaml
+--- !u!114 &1000000060
+MonoBehaviour:
+  m_Script: {fileID: 11500000, guid: 7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a, type: 3}
+  mapSceneName: MAP_001_GalaxyOverview
+  buttonPosition: {x: 0, y: -50}
+  buttonSize: {x: 200, y: 60}
+```
+
+**Result**: Map button auto-creates on Boot scene Start, enabled after Sign in.
+
+---
+
+### 6. ✅ Map Scene in Build Settings
+
+**Fixed**: `MAP_001_GalaxyOverview.unity` added to `EditorBuildSettings.asset`.
+
+**Build Settings**:
+```yaml
+m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Stub/Boot/BOOT_001_Splash.unity
+    guid: 00000000000000000000000000000000
+  - enabled: 1
+    path: Assets/Scenes/Stub/Map/MAP_001_GalaxyOverview.unity
+    guid: 6d9fb53b687e74d7cb957514e4f4eea2  # NEW
+```
+
+**Result**: `SceneManager.LoadScene("MAP_001_GalaxyOverview")` now works in Play mode.
+
+---
+
+**Status**: ✅ ALL CRITICAL FIXES APPLIED (SECOND PASS COMPLETE)
 
 **Commits**:
 - `a03baa2` - WebSocket trailing slash for nginx routing
 - `3530a0c` - Input System, JsonUtility arrays, Boot → Map navigation
+- `ae27d92` - Documentation updates
+- `607aefc` - Wire BootToMapNavigation in Boot scene + add Map to build settings
 
-**Ready for re-static review**.
+**Ready for re-static review (second pass)**.
 
 **Last Updated**: 2026-09-12
