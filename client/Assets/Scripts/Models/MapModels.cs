@@ -127,6 +127,8 @@ namespace GalacticEmpire.Models
     {
         public string event_type;
         public string message;
+        public int tick;
+        public string timestamp;
         public int ship_id;
         public Position old_position;
         public Position new_position;

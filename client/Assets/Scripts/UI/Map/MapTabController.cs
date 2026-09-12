@@ -256,7 +256,34 @@ namespace GalacticEmpire.UI.Map
         {
             Debug.Log($"[MapTab] Received sector delta tick {delta.tick} for sector {delta.sector_id}");
             
-            string updates = $"<b>Tick {delta.tick}</b> @ {delta.timestamp}\n";
+            // Derive tick and timestamp from first event with those fields (typically heartbeat)
+            // when top-level tick is 0 or missing (live ge-sim doesn't send top-level tick)
+            int displayTick = delta.tick;
+            string displayTimestamp = delta.timestamp;
+            
+            if (delta.events != null && delta.events.Length > 0)
+            {
+                foreach (var evt in delta.events)
+                {
+                    if (evt.tick > 0 || !string.IsNullOrEmpty(evt.timestamp))
+                    {
+                        if (displayTick == 0 && evt.tick > 0)
+                        {
+                            displayTick = evt.tick;
+                        }
+                        if (string.IsNullOrEmpty(displayTimestamp) && !string.IsNullOrEmpty(evt.timestamp))
+                        {
+                            displayTimestamp = evt.timestamp;
+                        }
+                        if (displayTick > 0 && !string.IsNullOrEmpty(displayTimestamp))
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            string updates = $"<b>Tick {displayTick}</b> @ {displayTimestamp}\n";
             
             if (delta.events != null)
             {

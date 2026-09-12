@@ -28,7 +28,7 @@ namespace GalacticEmpire.Networking
 
         public IEnumerator GetGalaxyOverview(Action<GalaxyOverviewResponse> onSuccess, Action<string> onError)
         {
-            string url = NetworkConfig.GetEndpointUrl("/sectors");
+            string url = NetworkConfig.GetEndpointUrl("/sectors/");
             Debug.Log($"[APIClient] GET {url}");
 
             using (UnityWebRequest request = UnityWebRequest.Get(url))

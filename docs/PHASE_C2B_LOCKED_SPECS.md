@@ -13,6 +13,8 @@
 - ✅ `GET /sectors` - Galaxy overview
 - ✅ `GET /sectors/{id}` - Sector detail
 
+**UPDATE (C2d)**: Live server at ge.jersweb.net returns 307 redirect for `/sectors` (HTTPS→HTTP downgrade, fails UnityWebRequest). Client now calls `/sectors/` (with trailing slash) to avoid redirect.
+
 **WebSocket Endpoint (WITH trailing slash):**
 - ✅ `/ws/` - WebSocket connection (trailing slash REQUIRED for nginx on live host)
 
@@ -44,6 +46,8 @@ WEBSOCKET_URL + "?token=" + token // → wss://ge.jersweb.net/ws/?token=...
 - Phase C2a server sends deltas every ~5 seconds
 - Client receives and displays delta events in UI
 - NOT YET: 6-second tick alignment per ADR
+
+**UPDATE (C2d)**: Live ge-sim at ge.jersweb.net publishes real sector_delta every ~6s with NO top-level tick/timestamp. The `tick` and `timestamp` fields live inside `events[]` (particularly in the `heartbeat` event). Client now derives display tick/timestamp from first event with those fields.
 
 **Future (Phase C2c):**
 - Align with ge-sim 6s ship tick per ADR
