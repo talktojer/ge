@@ -927,6 +927,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1000000035}
   - component: {fileID: 1000000036}
+  - component: {fileID: 1000000060}
   m_Layer: 0
   m_Name: AuthController
   m_TagString: Untagged
