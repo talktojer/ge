@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.Networking;
 using System.Collections;
 using GalacticEmpire.Networking;
+using GalacticEmpire.Core;
 
 namespace GalacticEmpire.UI.Boot
 {
@@ -88,6 +89,12 @@ namespace GalacticEmpire.UI.Boot
                     if (whoAmIButton != null)
                     {
                         whoAmIButton.interactable = true;
+                    }
+
+                    // Store session in GameStateManager
+                    if (GameStateManager.Instance != null)
+                    {
+                        GameStateManager.Instance.SetAuthenticationState(sessionToken, response.player_id);
                     }
 
                     Debug.Log($"[Auth] Session token acquired for player {response.player_id}");
