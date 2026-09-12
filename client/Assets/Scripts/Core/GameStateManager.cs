@@ -17,6 +17,10 @@ namespace GalacticEmpire.Core
         private string sessionToken = null;
         private string playerId = null;
 
+        public bool IsAuthenticated => isAuthenticated;
+        public string SessionToken => sessionToken;
+        public string PlayerId => playerId;
+
         // Game state
         private float lastServerSyncTime = 0f;
         private const float SERVER_SYNC_INTERVAL = 6f; // 6s tick per game design
