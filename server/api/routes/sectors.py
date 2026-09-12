@@ -158,10 +158,22 @@ STUB_SECTOR_DETAILS = {
 }
 
 
+async def _get_galaxy_overview_impl(player_id: str):
+    """
+    Implementation for galaxy overview endpoint.
+    Shared by both trailing-slash variants to avoid redirects.
+    """
+    logger.info("galaxy_overview_requested", player_id=player_id)
+    return GalaxyOverview(**STUB_GALAXY)
+
+
+@router.get("", response_model=GalaxyOverview)
 @router.get("/", response_model=GalaxyOverview)
 async def get_galaxy_overview(player_id: str = Depends(get_current_player)):
     """
-    GET /sectors - Galaxy overview with all sector stubs.
+    GET /sectors or /sectors/ - Galaxy overview with all sector stubs.
+    
+    Both paths accepted without redirect to prevent HTTPS→HTTP scheme downgrade.
     
     Returns:
         GalaxyOverview: shard_id, dimensions, and list of sector stubs
@@ -171,26 +183,13 @@ async def get_galaxy_overview(player_id: str = Depends(get_current_player)):
     Phase C2a: Stub implementation with hardcoded small galaxy.
     Future: Query database for real galaxy data.
     """
-    logger.info("galaxy_overview_requested", player_id=player_id)
-    
-    return GalaxyOverview(**STUB_GALAXY)
+    return await _get_galaxy_overview_impl(player_id)
 
 
-@router.get("/{sector_id}", response_model=SectorDetail)
-async def get_sector_detail(
-    sector_id: int,
-    player_id: str = Depends(get_current_player)
-):
+async def _get_sector_detail_impl(sector_id: int, player_id: str):
     """
-    GET /sectors/{sector_id} - Detailed sector data.
-    
-    Returns:
-        SectorDetail: Full sector info including planets and ships
-    
-    Requires: Bearer token authentication
-    
-    Phase C2a: Stub implementation with hardcoded sector data.
-    Future: Query database for real-time sector state.
+    Implementation for sector detail endpoint.
+    Shared by both trailing-slash variants to avoid redirects.
     """
     logger.info("sector_detail_requested", sector_id=sector_id, player_id=player_id)
     
@@ -201,3 +200,25 @@ async def get_sector_detail(
         )
     
     return SectorDetail(**STUB_SECTOR_DETAILS[sector_id])
+
+
+@router.get("/{sector_id}", response_model=SectorDetail)
+@router.get("/{sector_id}/", response_model=SectorDetail)
+async def get_sector_detail(
+    sector_id: int,
+    player_id: str = Depends(get_current_player)
+):
+    """
+    GET /sectors/{sector_id} or /sectors/{sector_id}/ - Detailed sector data.
+    
+    Both paths accepted without redirect to prevent HTTPS→HTTP scheme downgrade.
+    
+    Returns:
+        SectorDetail: Full sector info including planets and ships
+    
+    Requires: Bearer token authentication
+    
+    Phase C2a: Stub implementation with hardcoded sector data.
+    Future: Query database for real-time sector state.
+    """
+    return await _get_sector_detail_impl(sector_id, player_id)

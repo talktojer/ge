@@ -25,6 +25,14 @@ wsUrlWithToken = $"{WEBSOCKET_URL}?token={authToken}";
 - ✅ REST: `/sectors` and `/sectors/{id}` (NO trailing slash)
 - ✅ WebSocket: `/ws/` (WITH trailing slash - nginx requirement)
 
+**C2d Follow-up Fix (Post-PR#17)**: 
+FastAPI routes updated to accept both variants without redirect to prevent HTTPS→HTTP scheme downgrade:
+- ✅ `/sectors` and `/sectors/` both work (no 307 redirect)
+- ✅ `/sectors/{id}` and `/sectors/{id}/` both work (no 307 redirect)  
+- ✅ `/ws` and `/ws/` both work (no redirect)
+
+This prevents Unity client failures when nginx or proxies redirect with scheme downgrade.
+
 ---
 
 ### 2. Boot → Map Navigation
