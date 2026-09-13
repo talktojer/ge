@@ -137,6 +137,8 @@ DATABASE_URL=postgresql+asyncpg://... python seed_dev_data.py
 
 **Idempotent:** Script skips seeding if ship 201 already exists.
 
+**Note (FK Order):** Script flushes users, then sectors, before adding planets/ships to satisfy FK dependencies (sector_id references).
+
 ---
 
 ## Command Implementation Details

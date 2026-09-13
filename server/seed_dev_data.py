@@ -43,7 +43,7 @@ async def seed_database():
                 logger.info("seed_data_already_exists", message="Skipping seed (ship 201 exists)")
                 return
             
-            # Seed users
+            # Seed users first (no FK dependencies)
             users = [
                 User(id="player_1", username="TestPlayer1", cash=10000, kills=0, planets_owned=0),
                 User(id="player_2", username="TestPlayer2", cash=10000, kills=0, planets_owned=0),
@@ -53,9 +53,10 @@ async def seed_database():
             for user in users:
                 session.add(user)
             
+            await session.flush()  # Flush users before sectors (no dependencies between them, but good practice)
             logger.info("users_seeded", count=len(users))
             
-            # Seed sectors
+            # Seed sectors (no FK dependencies except optional self-reference)
             sectors = [
                 Sector(id=1, shard_id="main", x=0, y=0, type="normal", planet_count=3),
                 Sector(id=2, shard_id="main", x=1, y=0, type="normal", planet_count=0),
@@ -65,9 +66,46 @@ async def seed_database():
             for sector in sectors:
                 session.add(sector)
             
+            await session.flush()  # Flush sectors before planets/ships (they depend on sectors)
             logger.info("sectors_seeded", count=len(sectors))
             
-            # Seed ships (matching C3a in-memory stores)
+            # Seed planets (depend on sectors via sector_id FK)
+            planets = [
+                Planet(
+                    id=101,
+                    sector_id=1,
+                    owner_id="player_1",
+                    name="Terra Prime",
+                    treasury=0,
+                    tax_rate=10.0,
+                    population=0,
+                ),
+                Planet(
+                    id=102,
+                    sector_id=1,
+                    owner_id=None,  # Unowned, available for claiming
+                    name="New Horizon",
+                    treasury=0,
+                    tax_rate=10.0,
+                    population=0,
+                ),
+                Planet(
+                    id=103,
+                    sector_id=1,
+                    owner_id="player_2",
+                    name="Mining Station 7",
+                    treasury=0,
+                    tax_rate=10.0,
+                    population=0,
+                ),
+            ]
+            
+            for planet in planets:
+                session.add(planet)
+            
+            logger.info("planets_seeded", count=len(planets))
+            
+            # Seed ships (depend on sectors via sector_id FK, matching C3a in-memory stores)
             ships = [
                 Ship(
                     id=201,
@@ -120,43 +158,7 @@ async def seed_database():
             
             logger.info("ships_seeded", count=len(ships))
             
-            # Seed planets (matching C3a in-memory stores)
-            planets = [
-                Planet(
-                    id=101,
-                    sector_id=1,
-                    owner_id="player_1",
-                    name="Terra Prime",
-                    treasury=0,
-                    tax_rate=10.0,
-                    population=0,
-                ),
-                Planet(
-                    id=102,
-                    sector_id=1,
-                    owner_id=None,  # Unowned, available for claiming
-                    name="New Horizon",
-                    treasury=0,
-                    tax_rate=10.0,
-                    population=0,
-                ),
-                Planet(
-                    id=103,
-                    sector_id=1,
-                    owner_id="player_2",
-                    name="Mining Station 7",
-                    treasury=0,
-                    tax_rate=10.0,
-                    population=0,
-                ),
-            ]
-            
-            for planet in planets:
-                session.add(planet)
-            
-            logger.info("planets_seeded", count=len(planets))
-            
-            # Commit all changes
+            # Commit all changes (after FK dependencies are satisfied)
             await session.commit()
             logger.info("seed_complete", message="Database seeded successfully")
             
