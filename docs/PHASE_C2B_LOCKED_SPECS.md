@@ -9,14 +9,14 @@
 
 ✅ **LOCKED**: Different trailing slash rules for REST vs WebSocket due to nginx routing.
 
-**REST Endpoints (NO trailing slash):**
-- ✅ `GET /sectors` - Galaxy overview
-- ✅ `GET /sectors/{id}` - Sector detail
+**UPDATE (C2d post-PR#17)**: FastAPI now accepts both variants without redirect to prevent HTTPS→HTTP scheme downgrade.
 
-**UPDATE (C2d)**: Live server at ge.jersweb.net returns 307 redirect for `/sectors` (HTTPS→HTTP downgrade, fails UnityWebRequest). Client now calls `/sectors/` (with trailing slash) to avoid redirect.
+**REST Endpoints (both variants work):**
+- ✅ `GET /sectors` or `/sectors/` - Galaxy overview (no redirect)
+- ✅ `GET /sectors/{id}` or `/sectors/{id}/` - Sector detail (no redirect)
 
-**WebSocket Endpoint (WITH trailing slash):**
-- ✅ `/ws/` - WebSocket connection (trailing slash REQUIRED for nginx on live host)
+**WebSocket Endpoint (both variants work):**
+- ✅ `/ws` or `/ws/` - WebSocket connection (no redirect)
 
 **Implementation:**
 ```csharp
@@ -24,17 +24,19 @@
 public const string API_BASE_URL = "https://ge.jersweb.net";  // NO trailing slash
 public const string WEBSOCKET_URL = "wss://ge.jersweb.net/ws/";  // WITH trailing slash
 
-// REST calls - no trailing slash
+// REST calls - no trailing slash (but trailing slash also works now)
 GetEndpointUrl("/sectors")        // → https://ge.jersweb.net/sectors
 GetEndpointUrl("/sectors/{id}")   // → https://ge.jersweb.net/sectors/1
 
-// WebSocket connection - with trailing slash
+// WebSocket connection - with trailing slash (but bare /ws also works now)
 WEBSOCKET_URL + "?token=" + token // → wss://ge.jersweb.net/ws/?token=...
 ```
 
 **Why**: 
-- REST: UnityWebRequest can fail on redirect (301/302), so no trailing slash
-- WebSocket: nginx routing requires trailing slash, returns 403 without it (live host @ c1ea2ea)
+- **Original issue**: nginx routing required `/ws/` with trailing slash, returned 403 without it
+- **C2d issue**: Live `/sectors` returned 307 redirect to `http://…/sectors/` (HTTPS→HTTP downgrade)
+- **Fix**: FastAPI routes now dual-mounted (with and without trailing slash) to prevent any redirect
+- Unity client can use either variant; both return 200 without redirect
 
 ---
 
