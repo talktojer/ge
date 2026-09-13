@@ -91,7 +91,12 @@ namespace GalacticEmpire.UI.Boot
                         whoAmIButton.interactable = true;
                     }
 
-                    // Store session in GameStateManager
+                    // Store session in GameStateManager (create if Boot scene omitted the singleton)
+                    if (GameStateManager.Instance == null)
+                    {
+                        var go = new GameObject("GameStateManager");
+                        go.AddComponent<GameStateManager>();
+                    }
                     if (GameStateManager.Instance != null)
                     {
                         GameStateManager.Instance.SetAuthenticationState(sessionToken, response.player_id);
