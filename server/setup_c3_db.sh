@@ -9,11 +9,18 @@ echo "=========================="
 
 # Check if Postgres is ready
 echo "1. Checking Postgres connection..."
-if ! pg_isready -h postgres -U postgres -d galactic_empire > /dev/null 2>&1; then
-    echo "❌ Postgres not ready. Make sure docker-compose is running."
-    exit 1
+if command -v pg_isready > /dev/null 2>&1; then
+    # pg_isready is available, try to use it
+    if pg_isready -h postgres -U postgres -d galactic_empire > /dev/null 2>&1; then
+        echo "✅ Postgres is ready"
+    else
+        echo "⚠️  pg_isready check failed, but continuing anyway..."
+        echo "   (Postgres may still be starting up)"
+    fi
+else
+    echo "⚠️  pg_isready not found, skipping check"
+    echo "   (Proceeding with setup - migrations will fail if DB not ready)"
 fi
-echo "✅ Postgres is ready"
 
 # Run migrations
 echo ""
