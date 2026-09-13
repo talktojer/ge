@@ -247,7 +247,7 @@ namespace GalacticEmpire.UI.Map
                 SetLiveUpdates($"Ships: {snapshot.data.ships.Length}\n", append: true);
                 foreach (var ship in snapshot.data.ships)
                 {
-                    SetLiveUpdates($"- Ship {ship.id} @ ({ship.x},{ship.y}) heading {ship.heading}° speed {ship.speed}\n", append: true);
+                    SetLiveUpdates($"- Ship {ship.id} @ ({ship.position_x},{ship.position_y}) heading {ship.heading}° speed {ship.speed}\n", append: true);
                 }
             }
         }
