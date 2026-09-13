@@ -33,8 +33,13 @@ async def startup_event():
     Initialize connections on startup.
     """
     logger.info("api_startup", message="Galactic Empire API starting")
+    
+    # Initialize database connection pool
+    from database import init_db
+    await init_db()
+    logger.info("database_pool_initialized")
+    
     # Redis connection is lazily initialized by WebSocket handler
-    # TODO: Connect to Postgres (asyncpg pool)
     # TODO: Initialize Firebase Admin SDK
     # TODO: Start background tasks (health checks, metrics)
 
@@ -51,7 +56,15 @@ async def shutdown_event():
         await redis_client.close()
         logger.info("api_redis_closed")
     
-    # TODO: Close Postgres pool
+    # Close Postgres pool
+    from database import close_db
+    await close_db()
+    
+    # Close Redis connection used by commands
+    from api.routes.commands import _redis_client
+    if _redis_client:
+        await _redis_client.close()
+        logger.info("commands_redis_closed")
 
 @app.get("/")
 async def root():
