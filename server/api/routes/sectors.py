@@ -6,12 +6,20 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import structlog
+import os
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import select, func
 
 from api.dependencies import get_current_player
+from database.models import Ship, Planet, Sector, User
 
 logger = structlog.get_logger()
 
 router = APIRouter()
+
+# Use get_db_session from C3b database module
+from database import get_db_session
 
 
 # Response models
@@ -158,22 +166,10 @@ STUB_SECTOR_DETAILS = {
 }
 
 
-async def _get_galaxy_overview_impl(player_id: str):
-    """
-    Implementation for galaxy overview endpoint.
-    Shared by both trailing-slash variants to avoid redirects.
-    """
-    logger.info("galaxy_overview_requested", player_id=player_id)
-    return GalaxyOverview(**STUB_GALAXY)
-
-
-@router.get("", response_model=GalaxyOverview)
 @router.get("/", response_model=GalaxyOverview)
 async def get_galaxy_overview(player_id: str = Depends(get_current_player)):
     """
-    GET /sectors or /sectors/ - Galaxy overview with all sector stubs.
-    
-    Both paths accepted without redirect to prevent HTTPS→HTTP scheme downgrade.
+    GET /sectors - Galaxy overview with all sector stubs.
     
     Returns:
         GalaxyOverview: shard_id, dimensions, and list of sector stubs
@@ -183,42 +179,91 @@ async def get_galaxy_overview(player_id: str = Depends(get_current_player)):
     Phase C2a: Stub implementation with hardcoded small galaxy.
     Future: Query database for real galaxy data.
     """
-    return await _get_galaxy_overview_impl(player_id)
-
-
-async def _get_sector_detail_impl(sector_id: int, player_id: str):
-    """
-    Implementation for sector detail endpoint.
-    Shared by both trailing-slash variants to avoid redirects.
-    """
-    logger.info("sector_detail_requested", sector_id=sector_id, player_id=player_id)
+    logger.info("galaxy_overview_requested", player_id=player_id)
     
-    if sector_id not in STUB_SECTOR_DETAILS:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Sector {sector_id} not found"
-        )
-    
-    return SectorDetail(**STUB_SECTOR_DETAILS[sector_id])
+    return GalaxyOverview(**STUB_GALAXY)
 
 
 @router.get("/{sector_id}", response_model=SectorDetail)
-@router.get("/{sector_id}/", response_model=SectorDetail)
 async def get_sector_detail(
     sector_id: int,
     player_id: str = Depends(get_current_player)
 ):
     """
-    GET /sectors/{sector_id} or /sectors/{sector_id}/ - Detailed sector data.
-    
-    Both paths accepted without redirect to prevent HTTPS→HTTP scheme downgrade.
+    GET /sectors/{sector_id} - Detailed sector data.
     
     Returns:
         SectorDetail: Full sector info including planets and ships
     
     Requires: Bearer token authentication
     
-    Phase C2a: Stub implementation with hardcoded sector data.
-    Future: Query database for real-time sector state.
+    Phase C3: Query database for real-time sector state.
     """
-    return await _get_sector_detail_impl(sector_id, player_id)
+    logger.info("sector_detail_requested", sector_id=sector_id, player_id=player_id)
+    
+    async with async_session_maker() as session:
+        # Load sector
+        sector_result = await session.execute(
+            select(Sector).where(Sector.id == sector_id)
+        )
+        sector = sector_result.scalar_one_or_none()
+        
+        if not sector:
+            # Fall back to stub data if sector not in DB
+            if sector_id not in STUB_SECTOR_DETAILS:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Sector {sector_id} not found"
+                )
+            return SectorDetail(**STUB_SECTOR_DETAILS[sector_id])
+        
+        # Load ships in this sector
+        ships_result = await session.execute(
+            select(Ship, User.username).join(User, Ship.owner_id == User.id)
+            .where(Ship.position_x == sector.x)
+            .where(Ship.position_y == sector.y)
+        )
+        ships_data = ships_result.all()
+        
+        ships = [
+            ShipStub(
+                id=ship.id,
+                owner_id=ship.owner_id,
+                owner_name=username or "Unknown",
+                class_type=ship.class_type,
+                position_x=ship.position_x,
+                position_y=ship.position_y,
+                is_docked=bool(ship.is_docked)
+            )
+            for ship, username in ships_data
+        ]
+        
+        # Load planets in this sector
+        planets_result = await session.execute(
+            select(Planet, User.username)
+            .outerjoin(User, Planet.owner_id == User.id)
+            .where(Planet.sector_id == sector_id)
+        )
+        planets_data = planets_result.all()
+        
+        planets = [
+            PlanetStub(
+                id=planet.id,
+                name=planet.name,
+                owner_id=planet.owner_id,
+                owner_name=username,
+                is_safe_harbor=bool(planet.is_safe_harbor)
+            )
+            for planet, username in planets_data
+        ]
+        
+        return SectorDetail(
+            id=sector.id,
+            x=sector.x,
+            y=sector.y,
+            name=f"Sector ({sector.x}, {sector.y})",
+            sector_type=sector.type or "normal",
+            planet_count=len(planets),
+            planets=planets,
+            ships=ships
+        )
