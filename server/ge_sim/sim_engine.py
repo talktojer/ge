@@ -6,7 +6,11 @@ import asyncio
 import structlog
 import os
 from datetime import datetime
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import select, update
 from ge_sim.event_publisher import EventPublisher
+from database.models import Ship, Planet, Sector
 
 logger = structlog.get_logger()
 
@@ -24,6 +28,8 @@ class SimulationEngine:
         self.event_publisher = EventPublisher()
         self.ship_tick_count = 0
         self.planet_tick_count = 0
+        self.db_engine = None
+        self.async_session = None
     
     async def start(self):
         """Start simulation loops."""
@@ -36,7 +42,13 @@ class SimulationEngine:
         # Connect to Redis for event publishing
         await self.event_publisher.connect()
         
-        # TODO: Connect to Postgres (asyncpg)
+        # Connect to Postgres
+        database_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:dev@localhost:5432/galactic_empire")
+        self.db_engine = create_async_engine(database_url, echo=False)
+        self.async_session = sessionmaker(
+            self.db_engine, class_=AsyncSession, expire_on_commit=False
+        )
+        logger.info("database_connected", message="Connected to Postgres")
         
         # Run both ticks concurrently
         await asyncio.gather(
@@ -50,7 +62,10 @@ class SimulationEngine:
         logger.info("sim_engine_stop", message="ge-sim stopping")
         # Close Redis connection
         await self.event_publisher.close()
-        # TODO: Close database connections
+        # Close database connection
+        if self.db_engine:
+            await self.db_engine.dispose()
+            logger.info("database_closed", message="Database connection closed")
     
     async def ship_tick_loop(self):
         """
@@ -86,53 +101,96 @@ class SimulationEngine:
     async def process_ship_tick(self):
         """
         Process one ship tick.
-        TODO:
-        1. Load all active ships from Postgres
-        2. Apply movement physics (position += velocity * 6s)
-        3. Resolve combat damage (phasor/torpedo hits)
-        4. Recharge shields, energy (per ship stats)
-        5. Track torpedo/missile positions
-        6. Check mine proximity
-        7. Kill ships at 100% damage
-        8. Write updated ship states to Postgres
-        9. Publish ship deltas to Redis (sector:{x}:{y}:ship_moved)
+        Phase C3: Load ships from Postgres, apply simple updates, write back, publish deltas.
         
-        Phase C2c: Publish stub events to demonstrate tick→delta pipeline.
+        Full combat/physics reserved for later phases.
         """
         logger.debug("ship_tick_process", 
                     tick=self.ship_tick_count,
                     message="Processing ship tick")
         
-        # Stub: Publish a sector delta for testing
-        # In a real implementation, this would iterate over sectors with active ships
-        # For now, publish to sector 1 (ID format from C2a)
-        stub_events = [
-            {
-                "event_type": "heartbeat",
-                "tick": self.ship_tick_count,
-                "timestamp": datetime.utcnow().isoformat(),
-                "message": f"Ship tick {self.ship_tick_count} (6s interval)"
-            },
-            {
-                "event_type": "ship_moved",
-                "ship_id": 201,
-                "old_position": {"x": 5, "y": 5},
-                "new_position": {
-                    "x": 5 + (self.ship_tick_count % 3),
-                    "y": 5 + (self.ship_tick_count % 2)
-                },
-                "heading": 90.0,
-                "speed": 5.0,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        ]
-        
-        # Publish to sector 1 (matches C2a stub data)
-        await self.event_publisher.publish_sector_delta(sector_id=1, events=stub_events)
-        
-        logger.info("ship_tick_complete",
-                   tick=self.ship_tick_count,
-                   events_published=len(stub_events))
+        async with self.async_session() as session:
+            # Load all active ships (not docked, damage < 100)
+            result = await session.execute(
+                select(Ship).where(Ship.is_docked == 0).where(Ship.damage < 100.0)
+            )
+            ships = result.scalars().all()
+            
+            logger.debug("ships_loaded", count=len(ships), tick=self.ship_tick_count)
+            
+            # Group ships by sector for event publishing
+            sector_events = {}
+            
+            for ship in ships:
+                old_x, old_y = ship.position_x, ship.position_y
+                old_energy, old_shields = ship.energy, ship.shields
+                
+                # Simple stub movement: ships drift slightly based on heading
+                # Real physics would be: position += velocity * dt
+                # For now: small periodic movement to show state changes
+                if ship.speed > 0:
+                    # Simple movement based on tick count (stub)
+                    ship.position_x = old_x + (self.ship_tick_count % 3) if self.ship_tick_count % 2 == 0 else old_x
+                    ship.position_y = old_y + (self.ship_tick_count % 2) if self.ship_tick_count % 3 == 0 else old_y
+                
+                # Recharge energy (simple stub: +5% per tick, capped at 100)
+                ship.energy = min(100.0, ship.energy + 5.0)
+                
+                # Recharge shields (simple stub: +3% per tick, capped at 100)
+                ship.shields = min(100.0, ship.shields + 3.0)
+                
+                # Use Ship.sector_id from C3b
+                sector_id = ship.sector_id
+                
+                # Build event if position changed OR energy/shields changed
+                position_changed = (ship.position_x != old_x or ship.position_y != old_y)
+                status_changed = (ship.energy != old_energy or ship.shields != old_shields)
+                
+                if position_changed or status_changed:
+                    if sector_id not in sector_events:
+                        sector_events[sector_id] = []
+                    
+                    # Use ship_moved for position changes, ship_status for energy/shield-only changes
+                    event_type = "ship_moved" if position_changed else "ship_status"
+                    
+                    event = {
+                        "event_type": event_type,
+                        "ship_id": ship.id,
+                        "heading": ship.heading,
+                        "speed": ship.speed,
+                        "energy": ship.energy,
+                        "shields": ship.shields,
+                        "timestamp": datetime.utcnow().isoformat()
+                    }
+                    
+                    if position_changed:
+                        event["old_position"] = {"x": old_x, "y": old_y}
+                        event["new_position"] = {"x": ship.position_x, "y": ship.position_y}
+                    
+                    sector_events[sector_id].append(event)
+            
+            # Write updated ship states back to database
+            await session.commit()
+            
+            # Add heartbeat to each sector that has events
+            for sector_id in sector_events:
+                sector_events[sector_id].insert(0, {
+                    "event_type": "heartbeat",
+                    "tick": self.ship_tick_count,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "message": f"Ship tick {self.ship_tick_count} (6s interval)"
+                })
+            
+            # Publish sector deltas
+            total_events = 0
+            for sector_id, events in sector_events.items():
+                await self.event_publisher.publish_sector_delta(sector_id=sector_id, events=events)
+                total_events += len(events)
+            
+            logger.info("ship_tick_complete",
+                       tick=self.ship_tick_count,
+                       ships_processed=len(ships),
+                       events_published=total_events)
     
     async def planet_tick_loop(self):
         """
@@ -168,56 +226,89 @@ class SimulationEngine:
     async def process_planet_tick(self):
         """
         Process one planet tick.
-        TODO:
-        1. Load all owned planets from Postgres
-        2. Run production multipliers (Men, Fighters, Gold, Food per rates)
-        3. Collect taxes from population
-        4. Check spy discovery/intel
-        5. Update population growth
-        6. Write updated planet states to Postgres
-        7. Publish planet deltas to Redis (planet:{id}:production_ready)
-        8. Queue push notifications (production ready, stockpile full)
+        Phase C3: Load planets from Postgres, apply simple production, write back, publish deltas.
         
-        Phase C2c: Publish stub events to demonstrate tick→delta pipeline.
+        Full production formulas, spies, population growth reserved for later phases.
         """
         logger.debug("planet_tick_process",
                     tick=self.planet_tick_count,
                     message="Processing planet tick")
         
-        # Stub: Publish a planet production event
-        # In a real implementation, this would iterate over all owned planets
-        stub_production = {
-            "planet_id": 101,
-            "tick": self.planet_tick_count,
-            "timestamp": datetime.utcnow().isoformat(),
-            "item_deltas": {
-                "men": 100,
-                "food": 50,
-                "missiles": 10
-            },
-            "tax_collected": 500
-        }
-        
-        await self.event_publisher.publish_planet_production_complete(
-            planet_id=101,
-            production_data=stub_production
-        )
-        
-        # Also publish to sector delta for sector 1 (where planet 101 is located per C2a)
-        planet_events = [{
-            "event_type": "planet_production",
-            "tick": self.planet_tick_count,
-            "timestamp": datetime.utcnow().isoformat(),
-            "planet_id": 101,
-            "item_deltas": stub_production["item_deltas"],
-            "tax_collected": stub_production["tax_collected"]
-        }]
-        
-        await self.event_publisher.publish_sector_delta(sector_id=1, events=planet_events)
-        
-        logger.info("planet_tick_complete",
-                   tick=self.planet_tick_count,
-                   planet_events_published=1)
+        async with self.async_session() as session:
+            # Load all owned planets
+            result = await session.execute(
+                select(Planet).where(Planet.owner_id.isnot(None))
+            )
+            planets = result.scalars().all()
+            
+            logger.debug("planets_loaded", count=len(planets), tick=self.planet_tick_count)
+            
+            # Group events by sector for publishing
+            sector_events = {}
+            
+            for planet in planets:
+                # Simple production: add items based on production_rates
+                production_rates = planet.production_rates or {}
+                item_deltas = {}
+                
+                for item_type, rate in production_rates.items():
+                    # Simple stub: produce rate amount per tick
+                    delta = int(rate)
+                    if delta > 0:
+                        current_stocks = planet.item_stocks or {}
+                        current_stocks[item_type] = current_stocks.get(item_type, 0) + delta
+                        planet.item_stocks = current_stocks
+                        item_deltas[item_type] = delta
+                
+                # Collect taxes (stub: tax_rate% of population)
+                tax_collected = 0
+                if planet.population and planet.tax_rate:
+                    tax_collected = int(planet.population * planet.tax_rate / 100.0)
+                    planet.treasury = (planet.treasury or 0) + tax_collected
+                
+                # Build production event if anything was produced
+                if item_deltas or tax_collected > 0:
+                    production_data = {
+                        "planet_id": planet.id,
+                        "tick": self.planet_tick_count,
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "item_deltas": item_deltas,
+                        "tax_collected": tax_collected
+                    }
+                    
+                    # Publish to planet-specific channel
+                    await self.event_publisher.publish_planet_production_complete(
+                        planet_id=planet.id,
+                        production_data=production_data
+                    )
+                    
+                    # Also add to sector delta (use sector 1 for now; real impl would look up)
+                    sector_id = planet.sector_id
+                    if sector_id not in sector_events:
+                        sector_events[sector_id] = []
+                    
+                    sector_events[sector_id].append({
+                        "event_type": "planet_production",
+                        "planet_id": planet.id,
+                        "tick": self.planet_tick_count,
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "item_deltas": item_deltas,
+                        "tax_collected": tax_collected
+                    })
+            
+            # Write updated planet states back to database
+            await session.commit()
+            
+            # Publish sector deltas
+            total_events = 0
+            for sector_id, events in sector_events.items():
+                await self.event_publisher.publish_sector_delta(sector_id=sector_id, events=events)
+                total_events += len(events)
+            
+            logger.info("planet_tick_complete",
+                       tick=self.planet_tick_count,
+                       planets_processed=len(planets),
+                       events_published=total_events)
 
 async def main():
     """Entry point for ge-sim service."""
