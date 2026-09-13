@@ -144,7 +144,9 @@ namespace GalacticEmpire.UI.Map
                 
                 if (sectorButtonPrefab != null)
                 {
+                    // Prefab template is kept inactive; Instantiate preserves that — activate clones.
                     buttonObj = Instantiate(sectorButtonPrefab, sectorListContainer);
+                    buttonObj.SetActive(true);
                 }
                 else
                 {
