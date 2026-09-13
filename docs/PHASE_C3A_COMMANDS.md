@@ -17,6 +17,8 @@ Phase C3a implements session-gated player commands that affect world state and p
 
 **Architecture:** Commands → State Update → Redis Pub/Sub → WebSocket Clients
 
+**Hardening:** Each endpoint accepts both trailing-slash variants (e.g., `/commands/move` and `/commands/move/`) to prevent HTTPS→HTTP 307 redirects, mirroring the pattern used in `/sectors` (Phase C2d).
+
 ---
 
 ## Implementation Overview

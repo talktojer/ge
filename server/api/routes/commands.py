@@ -65,9 +65,13 @@ class ClaimCommand(BaseModel):
 
 
 @router.post("/move")
+@router.post("/move/")
 async def move_ship(command: MoveCommand, player_id: str = Depends(get_current_player)):
     """
     Move ship to target sector (or within sector).
+    
+    Both /commands/move and /commands/move/ paths accepted without redirect
+    to prevent HTTPS→HTTP scheme downgrade (same pattern as /sectors).
     
     Phase C3a: Validates ownership, updates position, publishes ship_moved event to Redis.
     
@@ -140,9 +144,13 @@ async def move_ship(command: MoveCommand, player_id: str = Depends(get_current_p
 
 
 @router.post("/fire")
+@router.post("/fire/")
 async def fire_weapon(command: FireCommand, player_id: str = Depends(get_current_player)):
     """
     Fire weapon at target ship in same sector.
+    
+    Both /commands/fire and /commands/fire/ paths accepted without redirect
+    to prevent HTTPS→HTTP scheme downgrade (same pattern as /sectors).
     
     Phase C3a: Validates ownership, queues combat action, publishes combat event to Redis.
     
@@ -221,9 +229,13 @@ async def fire_weapon(command: FireCommand, player_id: str = Depends(get_current
 
 
 @router.post("/claim")
+@router.post("/claim/")
 async def claim_planet(command: ClaimCommand, player_id: str = Depends(get_current_player)):
     """
     Claim an unowned planet in sector.
+    
+    Both /commands/claim and /commands/claim/ paths accepted without redirect
+    to prevent HTTPS→HTTP scheme downgrade (same pattern as /sectors).
     
     Phase C3a: Validates ownership, checks planet is unowned, assigns to player, publishes event.
     
