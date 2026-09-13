@@ -132,6 +132,7 @@ async def seed_database():
             {
                 "id": 201,
                 "owner_id": "player_1",
+                "sector_id": 1,  # Core Sector (5,5)
                 "name": "USS Enterprise",
                 "class_type": "frigate",
                 "position_x": 5,
@@ -146,6 +147,7 @@ async def seed_database():
             {
                 "id": 202,
                 "owner_id": "player_3",
+                "sector_id": 1,  # Core Sector (5,5)
                 "name": "Scout Alpha",
                 "class_type": "scout",
                 "position_x": 5,
@@ -160,6 +162,7 @@ async def seed_database():
             {
                 "id": 203,
                 "owner_id": "player_2",
+                "sector_id": 3,  # Asteroid Belt Alpha (6,5)
                 "name": "Dreadnought",
                 "class_type": "battleship",
                 "position_x": 6,
@@ -177,6 +180,7 @@ async def seed_database():
             ship = Ship(
                 id=ship_data["id"],
                 owner_id=ship_data["owner_id"],
+                sector_id=ship_data["sector_id"],
                 name=ship_data["name"],
                 class_type=ship_data["class_type"],
                 position_x=ship_data["position_x"],

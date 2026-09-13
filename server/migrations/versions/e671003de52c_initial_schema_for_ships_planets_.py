@@ -85,6 +85,7 @@ def upgrade() -> None:
         'ships',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('owner_id', sa.String(), nullable=False),
+        sa.Column('sector_id', sa.Integer(), nullable=False),
         sa.Column('name', sa.String(), nullable=False),
         sa.Column('class_type', sa.String(), nullable=False),
         sa.Column('position_x', sa.Integer(), nullable=False),
@@ -101,6 +102,7 @@ def upgrade() -> None:
         sa.Column('insurance_expiry', sa.DateTime(), nullable=True),
         sa.ForeignKeyConstraint(['docked_planet_id'], ['planets.id'], ),
         sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ),
+        sa.ForeignKeyConstraint(['sector_id'], ['sectors.id'], ),
         sa.PrimaryKeyConstraint('id')
     )
 

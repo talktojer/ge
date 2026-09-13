@@ -123,6 +123,7 @@ class SimulationEngine:
             
             for ship in ships:
                 old_x, old_y = ship.position_x, ship.position_y
+                old_energy, old_shields = ship.energy, ship.shields
                 
                 # Simple stub movement: ships drift slightly based on heading
                 # Real physics would be: position += velocity * dt
@@ -138,26 +139,35 @@ class SimulationEngine:
                 # Recharge shields (simple stub: +3% per tick, capped at 100)
                 ship.shields = min(100.0, ship.shields + 3.0)
                 
-                # Track sector ID (for now, we'll use sector 1)
-                # In a real implementation, look up sector by position
-                sector_id = 1
+                # Use Ship.sector_id from C3b
+                sector_id = ship.sector_id
                 
-                # Build event if position changed
-                if ship.position_x != old_x or ship.position_y != old_y:
+                # Build event if position changed OR energy/shields changed
+                position_changed = (ship.position_x != old_x or ship.position_y != old_y)
+                status_changed = (ship.energy != old_energy or ship.shields != old_shields)
+                
+                if position_changed or status_changed:
                     if sector_id not in sector_events:
                         sector_events[sector_id] = []
                     
-                    sector_events[sector_id].append({
-                        "event_type": "ship_moved",
+                    # Use ship_moved for position changes, ship_status for energy/shield-only changes
+                    event_type = "ship_moved" if position_changed else "ship_status"
+                    
+                    event = {
+                        "event_type": event_type,
                         "ship_id": ship.id,
-                        "old_position": {"x": old_x, "y": old_y},
-                        "new_position": {"x": ship.position_x, "y": ship.position_y},
                         "heading": ship.heading,
                         "speed": ship.speed,
                         "energy": ship.energy,
                         "shields": ship.shields,
                         "timestamp": datetime.utcnow().isoformat()
-                    })
+                    }
+                    
+                    if position_changed:
+                        event["old_position"] = {"x": old_x, "y": old_y}
+                        event["new_position"] = {"x": ship.position_x, "y": ship.position_y}
+                    
+                    sector_events[sector_id].append(event)
             
             # Write updated ship states back to database
             await session.commit()

@@ -6,20 +6,16 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import structlog
-import os
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from api.dependencies import get_current_player
 from database.models import Ship, Planet, Sector, User
+from database import get_db_session
 
 logger = structlog.get_logger()
 
 router = APIRouter()
-
-# Use get_db_session from C3b database module
-from database import get_db_session
 
 
 # Response models
