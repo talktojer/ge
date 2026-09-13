@@ -107,6 +107,12 @@ namespace GalacticEmpire.UI.Map
             int sectorCount = response.sectors?.Length ?? 0;
             SetStatus($"Galaxy loaded: {sectorCount} sectors in shard {response.shard_id}");
             DisplaySectorList();
+
+            // Auto-select first sector so Move/Fire/Claim work without a visible list click
+            if (sectorCount > 0)
+            {
+                OnSectorClicked(response.sectors[0].id);
+            }
         }
 
         private void OnGalaxyError(string error)
@@ -138,16 +144,30 @@ namespace GalacticEmpire.UI.Map
                 
                 if (sectorButtonPrefab != null)
                 {
+                    // Prefab template is kept inactive; Instantiate preserves that — activate clones.
                     buttonObj = Instantiate(sectorButtonPrefab, sectorListContainer);
+                    buttonObj.SetActive(true);
                 }
                 else
                 {
                     buttonObj = new GameObject($"Sector_{sector.id}");
-                    buttonObj.transform.SetParent(sectorListContainer);
+                    buttonObj.transform.SetParent(sectorListContainer, false);
+                    var rt = buttonObj.AddComponent<RectTransform>();
+                    rt.sizeDelta = new Vector2(280, 56);
+                    var img = buttonObj.AddComponent<Image>();
+                    img.color = new Color(0.15f, 0.2f, 0.3f, 0.95f);
                     buttonObj.AddComponent<Button>();
-                    var text = buttonObj.AddComponent<Text>();
+                    var textObj = new GameObject("Text");
+                    textObj.transform.SetParent(buttonObj.transform, false);
+                    var textRt = textObj.AddComponent<RectTransform>();
+                    textRt.anchorMin = Vector2.zero;
+                    textRt.anchorMax = Vector2.one;
+                    textRt.sizeDelta = Vector2.zero;
+                    var text = textObj.AddComponent<Text>();
                     text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                     text.color = Color.white;
+                    text.fontSize = 12;
+                    text.alignment = TextAnchor.MiddleLeft;
                 }
 
                 var button = buttonObj.GetComponent<Button>();
