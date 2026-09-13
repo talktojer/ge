@@ -183,7 +183,8 @@ async def get_galaxy_overview(player_id: str = Depends(get_current_player)):
 @router.get("/{sector_id}", response_model=SectorDetail)
 async def get_sector_detail(
     sector_id: int,
-    player_id: str = Depends(get_current_player)
+    player_id: str = Depends(get_current_player),
+    db: AsyncSession = Depends(get_db_session)
 ):
     """
     GET /sectors/{sector_id} - Detailed sector data.
@@ -197,69 +198,67 @@ async def get_sector_detail(
     """
     logger.info("sector_detail_requested", sector_id=sector_id, player_id=player_id)
     
-    async with async_session_maker() as session:
-        # Load sector
-        sector_result = await session.execute(
-            select(Sector).where(Sector.id == sector_id)
-        )
-        sector = sector_result.scalar_one_or_none()
-        
-        if not sector:
-            # Fall back to stub data if sector not in DB
-            if sector_id not in STUB_SECTOR_DETAILS:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Sector {sector_id} not found"
-                )
-            return SectorDetail(**STUB_SECTOR_DETAILS[sector_id])
-        
-        # Load ships in this sector
-        ships_result = await session.execute(
-            select(Ship, User.username).join(User, Ship.owner_id == User.id)
-            .where(Ship.position_x == sector.x)
-            .where(Ship.position_y == sector.y)
-        )
-        ships_data = ships_result.all()
-        
-        ships = [
-            ShipStub(
-                id=ship.id,
-                owner_id=ship.owner_id,
-                owner_name=username or "Unknown",
-                class_type=ship.class_type,
-                position_x=ship.position_x,
-                position_y=ship.position_y,
-                is_docked=bool(ship.is_docked)
+    # Load sector
+    sector_result = await db.execute(
+        select(Sector).where(Sector.id == sector_id)
+    )
+    sector = sector_result.scalar_one_or_none()
+    
+    if not sector:
+        # Fall back to stub data if sector not in DB
+        if sector_id not in STUB_SECTOR_DETAILS:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Sector {sector_id} not found"
             )
-            for ship, username in ships_data
-        ]
-        
-        # Load planets in this sector
-        planets_result = await session.execute(
-            select(Planet, User.username)
-            .outerjoin(User, Planet.owner_id == User.id)
-            .where(Planet.sector_id == sector_id)
+        return SectorDetail(**STUB_SECTOR_DETAILS[sector_id])
+    
+    # Load ships in this sector
+    ships_result = await db.execute(
+        select(Ship, User.username).join(User, Ship.owner_id == User.id)
+        .where(Ship.sector_id == sector_id)
+    )
+    ships_data = ships_result.all()
+    
+    ships = [
+        ShipStub(
+            id=ship.id,
+            owner_id=ship.owner_id,
+            owner_name=username or "Unknown",
+            class_type=ship.class_type,
+            position_x=ship.position_x,
+            position_y=ship.position_y,
+            is_docked=bool(ship.is_docked)
         )
-        planets_data = planets_result.all()
-        
-        planets = [
-            PlanetStub(
-                id=planet.id,
-                name=planet.name,
-                owner_id=planet.owner_id,
-                owner_name=username,
-                is_safe_harbor=bool(planet.is_safe_harbor)
-            )
-            for planet, username in planets_data
-        ]
-        
-        return SectorDetail(
-            id=sector.id,
-            x=sector.x,
-            y=sector.y,
-            name=f"Sector ({sector.x}, {sector.y})",
-            sector_type=sector.type or "normal",
-            planet_count=len(planets),
-            planets=planets,
-            ships=ships
+        for ship, username in ships_data
+    ]
+    
+    # Load planets in this sector
+    planets_result = await db.execute(
+        select(Planet, User.username)
+        .outerjoin(User, Planet.owner_id == User.id)
+        .where(Planet.sector_id == sector_id)
+    )
+    planets_data = planets_result.all()
+    
+    planets = [
+        PlanetStub(
+            id=planet.id,
+            name=planet.name,
+            owner_id=planet.owner_id,
+            owner_name=username,
+            is_safe_harbor=bool(planet.is_safe_harbor)
         )
+        for planet, username in planets_data
+    ]
+    
+    return SectorDetail(
+        id=sector.id,
+        x=sector.x,
+        y=sector.y,
+        name=f"Sector ({sector.x}, {sector.y})",
+        sector_type=sector.type or "normal",
+        planet_count=len(planets),
+        planets=planets,
+        ships=ships
+    )

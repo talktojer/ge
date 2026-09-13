@@ -7,6 +7,7 @@ import os
 from datetime import datetime
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import select, text
 from database.models import Base, User, Ship, Planet, Sector, Team
 
 async def seed_database():
@@ -17,6 +18,13 @@ async def seed_database():
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     
     async with async_session() as session:
+        # Check if data already exists (idempotency check)
+        result = await session.execute(select(Ship).where(Ship.id == 201))
+        existing_ship = result.scalar_one_or_none()
+        
+        if existing_ship:
+            print("ℹ️  Seed data already exists (ship 201 found). Skipping seed.")
+            return
         # Create teams
         team1 = Team(
             id="team_alpha",
@@ -44,6 +52,8 @@ async def seed_database():
                 created_at=datetime.utcnow()
             )
             session.add(user)
+        
+        await session.flush()
         
         # Create sectors
         sectors_data = [
@@ -124,7 +134,7 @@ async def seed_database():
         
         # Update planet counts
         await session.execute(
-            "UPDATE sectors SET planet_count = (SELECT COUNT(*) FROM planets WHERE planets.sector_id = sectors.id)"
+            text("UPDATE sectors SET planet_count = (SELECT COUNT(*) FROM planets WHERE planets.sector_id = sectors.id)")
         )
         
         # Create ships
