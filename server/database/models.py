@@ -2,14 +2,11 @@
 Database models and connection.
 SQLAlchemy async models for Postgres.
 """
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import Column, Integer, String, Float, JSON, ForeignKey, DateTime
+from database import Base
 import structlog
 
 logger = structlog.get_logger()
-
-Base = declarative_base()
 
 class User(Base):
     """Player account."""
@@ -31,6 +28,7 @@ class Ship(Base):
     
     id = Column(Integer, primary_key=True)
     owner_id = Column(String, ForeignKey("users.id"), nullable=False)
+    sector_id = Column(Integer, ForeignKey("sectors.id"), nullable=False)
     name = Column(String, nullable=False)
     class_type = Column(String, nullable=False)  # "scout", "frigate", "battleship"
     position_x = Column(Integer, nullable=False)
@@ -99,20 +97,4 @@ class Team(Base):
 
 # TODO: Add Mail, CombatLog, TradeHistory tables
 
-# Database connection pool
-async def create_db_pool(database_url: str):
-    """
-    Create async Postgres connection pool.
-    TODO: Use asyncpg driver
-    TODO: Configure pool size, timeouts
-    TODO: Return engine and session maker
-    """
-    engine = create_async_engine(database_url, echo=True)
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    
-    # TODO: Create tables if not exist (or use Alembic migrations)
-    # async with engine.begin() as conn:
-    #     await conn.run_sync(Base.metadata.create_all)
-    
-    logger.info("database_connected", url=database_url)
-    return engine, async_session
+# Database connection and session management now in database/__init__.py
