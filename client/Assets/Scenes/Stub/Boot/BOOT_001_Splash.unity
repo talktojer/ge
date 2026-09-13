@@ -290,6 +290,23 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &923068154
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GalacticEmpire.UI.Boot.BootToMapNavigation
+  mapSceneName: MAP_001_GalaxyOverview
+  mapButton: {fileID: 0}
+  buttonContainer: {fileID: 0}
+  buttonPosition: {x: 0, y: -50}
+  buttonSize: {x: 200, y: 60}
 --- !u!1 &1000000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -302,6 +319,7 @@ GameObject:
   - component: {fileID: 1000000003}
   - component: {fileID: 1000000004}
   - component: {fileID: 1000000005}
+  - component: {fileID: 923068154}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -927,7 +945,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1000000035}
   - component: {fileID: 1000000036}
-  - component: {fileID: 1000000060}
   m_Layer: 0
   m_Name: AuthController
   m_TagString: Untagged
@@ -965,23 +982,6 @@ MonoBehaviour:
   signInButton: {fileID: 1510513153}
   whoAmIButton: {fileID: 259135077}
   authStatusText: {fileID: 1000000054}
---- !u!114 &1000000060
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1000000034}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  mapSceneName: MAP_001_GalaxyOverview
-  mapButton: {fileID: 0}
-  buttonContainer: {fileID: 0}
-  buttonPosition: {x: 0, y: -50}
-  buttonSize: {x: 200, y: 60}
 --- !u!1 &1000000037
 GameObject:
   m_ObjectHideFlags: 0
