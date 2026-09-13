@@ -59,8 +59,8 @@ namespace GalacticEmpire.UI.Boot
             string exchangeUrl = NetworkConfig.GetEndpointUrl("/auth/exchange");
             Debug.Log($"[Auth] Calling {exchangeUrl}");
 
-            // Use DEV bypass token
-            string devToken = "ge-dev-user-jeremy";
+            // Use DEV bypass token for player_1 (owns ships 201/202 for C3 command testing)
+            string devToken = "ge-dev-user-player_1";
             string jsonBody = $"{{\"dev_token\":\"{devToken}\"}}";
 
             using (UnityWebRequest request = new UnityWebRequest(exchangeUrl, "POST"))

@@ -102,13 +102,142 @@ namespace GalacticEmpire.Networking
             }
         }
 
+        public IEnumerator PostMove(MoveCommandRequest moveRequest, Action<MoveCommandResponse> onSuccess, Action<string> onError)
+        {
+            string url = NetworkConfig.GetEndpointUrl("/commands/move/");
+            string jsonBody = JsonUtility.ToJson(moveRequest);
+            Debug.Log($"[APIClient] POST {url} body: {jsonBody}");
+
+            using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
+            {
+                byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonBody);
+                request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+                request.downloadHandler = new DownloadHandlerBuffer();
+                request.SetRequestHeader("Content-Type", "application/json");
+
+                if (!string.IsNullOrEmpty(authToken))
+                {
+                    request.SetRequestHeader("Authorization", $"Bearer {authToken}");
+                }
+
+                yield return request.SendWebRequest();
+
+                if (request.result == UnityWebRequest.Result.Success)
+                {
+                    string responseText = request.downloadHandler.text;
+                    Debug.Log($"[APIClient] Move response: {responseText}");
+
+                    try
+                    {
+                        MoveCommandResponse response = JsonUtility.FromJson<MoveCommandResponse>(responseText);
+                        onSuccess?.Invoke(response);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError($"[APIClient] Parse error: {ex.Message}");
+                        onError?.Invoke($"Parse error: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    Debug.LogError($"[APIClient] Move command failed: {request.error}");
+                    onError?.Invoke(request.error);
+                }
+            }
+        }
+
+        public IEnumerator PostFire(FireCommandRequest fireRequest, Action<FireCommandResponse> onSuccess, Action<string> onError)
+        {
+            string url = NetworkConfig.GetEndpointUrl("/commands/fire/");
+            string jsonBody = JsonUtility.ToJson(fireRequest);
+            Debug.Log($"[APIClient] POST {url} body: {jsonBody}");
+
+            using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
+            {
+                byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonBody);
+                request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+                request.downloadHandler = new DownloadHandlerBuffer();
+                request.SetRequestHeader("Content-Type", "application/json");
+
+                if (!string.IsNullOrEmpty(authToken))
+                {
+                    request.SetRequestHeader("Authorization", $"Bearer {authToken}");
+                }
+
+                yield return request.SendWebRequest();
+
+                if (request.result == UnityWebRequest.Result.Success)
+                {
+                    string responseText = request.downloadHandler.text;
+                    Debug.Log($"[APIClient] Fire response: {responseText}");
+
+                    try
+                    {
+                        FireCommandResponse response = JsonUtility.FromJson<FireCommandResponse>(responseText);
+                        onSuccess?.Invoke(response);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError($"[APIClient] Parse error: {ex.Message}");
+                        onError?.Invoke($"Parse error: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    Debug.LogError($"[APIClient] Fire command failed: {request.error}");
+                    onError?.Invoke(request.error);
+                }
+            }
+        }
+
+        public IEnumerator PostClaim(ClaimCommandRequest claimRequest, Action<ClaimCommandResponse> onSuccess, Action<string> onError)
+        {
+            string url = NetworkConfig.GetEndpointUrl("/commands/claim/");
+            string jsonBody = JsonUtility.ToJson(claimRequest);
+            Debug.Log($"[APIClient] POST {url} body: {jsonBody}");
+
+            using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
+            {
+                byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonBody);
+                request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+                request.downloadHandler = new DownloadHandlerBuffer();
+                request.SetRequestHeader("Content-Type", "application/json");
+
+                if (!string.IsNullOrEmpty(authToken))
+                {
+                    request.SetRequestHeader("Authorization", $"Bearer {authToken}");
+                }
+
+                yield return request.SendWebRequest();
+
+                if (request.result == UnityWebRequest.Result.Success)
+                {
+                    string responseText = request.downloadHandler.text;
+                    Debug.Log($"[APIClient] Claim response: {responseText}");
+
+                    try
+                    {
+                        ClaimCommandResponse response = JsonUtility.FromJson<ClaimCommandResponse>(responseText);
+                        onSuccess?.Invoke(response);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError($"[APIClient] Parse error: {ex.Message}");
+                        onError?.Invoke($"Parse error: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    Debug.LogError($"[APIClient] Claim command failed: {request.error}");
+                    onError?.Invoke(request.error);
+                }
+            }
+        }
+
         // TODO: Implement remaining REST endpoints:
         // - GET /player/profile
         // - GET /player/ships
         // - GET /player/planets
-        // - POST /commands/move
-        // - POST /commands/fire
-        // - POST /commands/claim
         // - POST /trade/buy
         // - POST /trade/sell
     }

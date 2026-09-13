@@ -134,6 +134,13 @@ namespace GalacticEmpire.Models
         public Position new_position;
         public float heading;
         public float speed;
+        public int attacker_id;
+        public int target_id;
+        public string weapon_type;
+        public float damage;
+        public int planet_id;
+        public string planet_name;
+        public string owner_id;
     }
 
     [Serializable]
@@ -147,5 +154,58 @@ namespace GalacticEmpire.Models
     public class WSErrorMessage : WSMessage
     {
         public string message;
+    }
+
+    [Serializable]
+    public class MoveCommandRequest
+    {
+        public int ship_id;
+        public float target_x;
+        public float target_y;
+    }
+
+    [Serializable]
+    public class MoveCommandResponse
+    {
+        public bool success;
+        public int ship_id;
+        public Position new_position;
+        public bool event_published;
+    }
+
+    [Serializable]
+    public class FireCommandRequest
+    {
+        public int ship_id;
+        public string weapon_type;
+        public int target_id;
+    }
+
+    [Serializable]
+    public class FireCommandResponse
+    {
+        public bool success;
+        public int ship_id;
+        public int target_id;
+        public string weapon_type;
+        public float damage;
+        public bool event_published;
+    }
+
+    [Serializable]
+    public class ClaimCommandRequest
+    {
+        public int ship_id;
+        public int planet_id;
+    }
+
+    [Serializable]
+    public class ClaimCommandResponse
+    {
+        public bool success;
+        public int planet_id;
+        public string planet_name;
+        public string owner_id;
+        public bool event_published;
     }
 }

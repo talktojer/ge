@@ -80,6 +80,10 @@ namespace GalacticEmpire.UI.Map
             statusText.fontSize = 16;
 
             var loadGalaxyButton = CreateButton(uiRoot.transform, "LoadGalaxyButton", new Vector2(0, 120), new Vector2(200, 60), "Load Galaxy");
+            
+            var moveButton = CreateButton(uiRoot.transform, "MoveButton", new Vector2(-250, 50), new Vector2(150, 50), "Move Ship 201");
+            var fireButton = CreateButton(uiRoot.transform, "FireButton", new Vector2(-80, 50), new Vector2(150, 50), "Fire 201→202");
+            var claimButton = CreateButton(uiRoot.transform, "ClaimButton", new Vector2(90, 50), new Vector2(150, 50), "Claim Planet 102");
 
             var scrollViewObj = CreateScrollView(uiRoot.transform, "SectorList", new Vector2(-200, -50), new Vector2(350, 400));
             var sectorListContainer = scrollViewObj.transform.Find("Viewport/Content");
@@ -124,7 +128,7 @@ namespace GalacticEmpire.UI.Map
 
             var sectorButtonPrefab = CreateSectorButtonPrefab();
 
-            AssignFieldsViaReflection(controller, statusText, loadGalaxyButton, sectorListContainer, sectorButtonPrefab, sectorDetailText, liveUpdatesText);
+            AssignFieldsViaReflection(controller, statusText, loadGalaxyButton, sectorListContainer, sectorButtonPrefab, sectorDetailText, liveUpdatesText, moveButton, fireButton, claimButton);
 
             Debug.Log("[MapSceneSetup] Map UI created successfully");
         }
@@ -263,7 +267,8 @@ namespace GalacticEmpire.UI.Map
         }
 
         private void AssignFieldsViaReflection(MapTabController controller, Text statusText, Button loadGalaxyButton, 
-            Transform sectorListContainer, GameObject sectorButtonPrefab, Text sectorDetailText, Text liveUpdatesText)
+            Transform sectorListContainer, GameObject sectorButtonPrefab, Text sectorDetailText, Text liveUpdatesText,
+            Button moveButton, Button fireButton, Button claimButton)
         {
             var type = controller.GetType();
             var bindingFlags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
@@ -274,6 +279,9 @@ namespace GalacticEmpire.UI.Map
             type.GetField("sectorButtonPrefab", bindingFlags)?.SetValue(controller, sectorButtonPrefab);
             type.GetField("sectorDetailText", bindingFlags)?.SetValue(controller, sectorDetailText);
             type.GetField("liveUpdatesText", bindingFlags)?.SetValue(controller, liveUpdatesText);
+            type.GetField("moveButton", bindingFlags)?.SetValue(controller, moveButton);
+            type.GetField("fireButton", bindingFlags)?.SetValue(controller, fireButton);
+            type.GetField("claimButton", bindingFlags)?.SetValue(controller, claimButton);
             
             Debug.Log("[MapSceneSetup] Fields assigned via reflection");
         }

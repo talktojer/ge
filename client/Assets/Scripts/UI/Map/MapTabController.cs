@@ -21,6 +21,11 @@ namespace GalacticEmpire.UI.Map
         [SerializeField] private GameObject sectorButtonPrefab;
         [SerializeField] private Text sectorDetailText;
         [SerializeField] private Text liveUpdatesText;
+        
+        [Header("Command UI (Phase C3)")]
+        [SerializeField] private Button moveButton;
+        [SerializeField] private Button fireButton;
+        [SerializeField] private Button claimButton;
 
         private APIClient apiClient;
         private WebSocketClient wsClient;
@@ -40,6 +45,21 @@ namespace GalacticEmpire.UI.Map
             if (loadGalaxyButton != null)
             {
                 loadGalaxyButton.onClick.AddListener(OnLoadGalaxyClicked);
+            }
+            
+            if (moveButton != null)
+            {
+                moveButton.onClick.AddListener(OnMoveClicked);
+            }
+            
+            if (fireButton != null)
+            {
+                fireButton.onClick.AddListener(OnFireClicked);
+            }
+            
+            if (claimButton != null)
+            {
+                claimButton.onClick.AddListener(OnClaimClicked);
             }
 
             SetStatus("Ready. Click 'Load Galaxy' to fetch sectors.");
@@ -297,6 +317,14 @@ namespace GalacticEmpire.UI.Map
                     {
                         updates += $"- Ship {evt.ship_id} moved from ({evt.old_position?.x},{evt.old_position?.y}) to ({evt.new_position?.x},{evt.new_position?.y})\n";
                     }
+                    else if (evt.event_type == "combat")
+                    {
+                        updates += $"- Combat: Ship {evt.attacker_id} fired {evt.weapon_type} at Ship {evt.target_id} for {evt.damage} damage\n";
+                    }
+                    else if (evt.event_type == "planet_claimed")
+                    {
+                        updates += $"- Planet Claimed: {evt.planet_name} (ID: {evt.planet_id}) claimed by {evt.owner_id}\n";
+                    }
                     else
                     {
                         updates += $"- {evt.event_type}: {evt.message}\n";
@@ -334,6 +362,100 @@ namespace GalacticEmpire.UI.Map
                     liveUpdatesText.text = message;
                 }
             }
+        }
+
+        private void OnMoveClicked()
+        {
+            if (!ValidateCommandPreconditions()) return;
+
+            var moveRequest = new MoveCommandRequest
+            {
+                ship_id = 201,
+                target_x = 6f,
+                target_y = 5f
+            };
+
+            SetStatus($"Moving ship {moveRequest.ship_id} to ({moveRequest.target_x}, {moveRequest.target_y})...");
+            StartCoroutine(apiClient.PostMove(moveRequest, OnMoveSuccess, OnMoveError));
+        }
+
+        private void OnMoveSuccess(MoveCommandResponse response)
+        {
+            SetStatus($"Move success: Ship {response.ship_id} moved to ({response.new_position.x}, {response.new_position.y})");
+            Debug.Log($"[MapTab] Move command success: {response.ship_id}");
+        }
+
+        private void OnMoveError(string error)
+        {
+            SetStatus($"Move failed: {error}");
+        }
+
+        private void OnFireClicked()
+        {
+            if (!ValidateCommandPreconditions()) return;
+
+            var fireRequest = new FireCommandRequest
+            {
+                ship_id = 201,
+                weapon_type = "phasor",
+                target_id = 202
+            };
+
+            SetStatus($"Ship {fireRequest.ship_id} firing {fireRequest.weapon_type} at ship {fireRequest.target_id}...");
+            StartCoroutine(apiClient.PostFire(fireRequest, OnFireSuccess, OnFireError));
+        }
+
+        private void OnFireSuccess(FireCommandResponse response)
+        {
+            SetStatus($"Fire success: Ship {response.ship_id} hit ship {response.target_id} with {response.weapon_type} for {response.damage} damage");
+            Debug.Log($"[MapTab] Fire command success: {response.ship_id} -> {response.target_id}");
+        }
+
+        private void OnFireError(string error)
+        {
+            SetStatus($"Fire failed: {error}");
+        }
+
+        private void OnClaimClicked()
+        {
+            if (!ValidateCommandPreconditions()) return;
+
+            var claimRequest = new ClaimCommandRequest
+            {
+                ship_id = 201,
+                planet_id = 102
+            };
+
+            SetStatus($"Ship {claimRequest.ship_id} claiming planet {claimRequest.planet_id}...");
+            StartCoroutine(apiClient.PostClaim(claimRequest, OnClaimSuccess, OnClaimError));
+        }
+
+        private void OnClaimSuccess(ClaimCommandResponse response)
+        {
+            SetStatus($"Claim success: Planet {response.planet_name} (ID: {response.planet_id}) claimed by {response.owner_id}");
+            Debug.Log($"[MapTab] Claim command success: {response.planet_id}");
+        }
+
+        private void OnClaimError(string error)
+        {
+            SetStatus($"Claim failed: {error}");
+        }
+
+        private bool ValidateCommandPreconditions()
+        {
+            if (GameStateManager.Instance == null || !GameStateManager.Instance.IsAuthenticated)
+            {
+                SetStatus("Error: Not authenticated. Please sign in first.");
+                return false;
+            }
+
+            if (!subscribedSectorId.HasValue)
+            {
+                SetStatus("Error: Please select and subscribe to a sector first.");
+                return false;
+            }
+
+            return true;
         }
     }
 }
